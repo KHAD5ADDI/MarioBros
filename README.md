@@ -65,4 +65,5 @@ Project developed as part of the ML Proof of Concept 2024-2025 course – Albert
 - Florent NEGAF
 - Khadidja ADDI
 - Titouan PERRON
-👨‍🏫 Supervised by Gianluca Quercini
+
+👨‍🏫 Supervised by Gianluca QUERCINI
