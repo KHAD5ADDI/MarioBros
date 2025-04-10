@@ -59,6 +59,13 @@ pip install -r requirements.txt
 python src/simulator.py
 ```
 
+## 📜 License
+
+This project is for **educational purposes only**.  
+Super Mario Bros is a registered trademark of **Nintendo Co., Ltd.**  
+No commercial use is intended. All rights to original game assets belong to their respective owners.
+
+
 ## 📌 Authors
 
 Project developed as part of the ML Proof of Concept 2024-2025 course – Albert Global Data School by:
@@ -67,3 +74,5 @@ Project developed as part of the ML Proof of Concept 2024-2025 course – Albert
 - Titouan PERRON
 
 👨‍🏫 Supervised by Gianluca QUERCINI
+
+
