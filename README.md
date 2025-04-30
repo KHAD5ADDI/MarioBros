@@ -1,78 +1,103 @@
 # 🕹️ Super Mario Bros AI Simulator
 
-## 🎯 Project Objective
+## 🎯 Project Objective  
+This project aims to develop an interactive Super Mario Bros simulator integrating **two intelligent agents** capable of learning to play the game under different levels of knowledge:
 
-This project aims to develop an interactive **Super Mario Bros simulator** integrating two machine learning models capable of learning to play the game under different levels of knowledge.
-
-The goal is to simulate and compare the **performance of two intelligent agents** in a controlled game environment:
-
-- An **informed agent** (Agent 1), which knows the game objects (enemies, bonuses, obstacles) **and their functions** (e.g., "this mushroom gives speed").
-- A **naive agent** (Agent 2), which sees the objects but **has no knowledge of their roles or the correct timing for actions** (e.g., when to jump, avoid, or enter tunnels).
-
-
-## 🧠 Technical Approach
-
-### 🕵️‍♂️ Agent 1 – Feature-Informed Learning
-- **Inputs**: Object type, object role, Mario’s state, relative positions.
-- **Model**: Neural network (supervised learning + reinforcement learning, e.g., Q-learning or PPO).
-- **Goal**: Optimize performance (speed + score) using **semantic features** to accelerate learning.
-
-### 🤖 Agent 2 – Pure Exploration Learning
-- **Inputs**: Raw visual or vector-based game state (e.g., sprites, map layout, environmental info).
-- **Model**: Neural network trained via **reinforcement learning only**, without prior object knowledge.
-- **Goal**: Learn to play by exploration, like a human discovering the game for the first time.
-
-## 🏗️ Project Architecture
-
+- **Agent 1 – Informed Agent**: understands game objects (enemies, bonuses, obstacles) and their functions.  
+- **Agent 2 – Naive Agent**: explores the game without prior knowledge, learning everything from scratch.
 
 ---
 
-## 🧪 Technologies Used
+## 🧠 Technical Approach
 
-- 🐍 **Python 3.10+**
-- 🎮 **Pygame** (2D game development)
-- 🧠 **PyTorch** or **TensorFlow** (neural model development)
-- 📊 **Pandas**, **NumPy**, **Matplotlib** (data handling & visualization)
-- 🤖 **Stable-Baselines3** (optional RL library)
+### 🕵️‍♂️ Agent 1 – Feature-Informed Learning  
+- **Inputs**: object types and roles, Mario’s state, relative positions  
+- **Model**: neural network + reinforcement learning (e.g., Q-learning or PPO)  
+- **Goal**: optimize performance using semantic features to accelerate learning
+
+### 🤖 Agent 2 – Pure Exploration Learning  
+- **Inputs**: raw game state (sprites, map layout, environment)  
+- **Model**: neural network trained purely via reinforcement learning, with no prior knowledge  
+- **Goal**: learn through exploration, like a human discovering the game for the first time
+
+---
+
+## 🏗️ Project Architecture & Technologies
+
+### 🧪 Technologies Used:
+- 🐍 Python 3.10+  
+- 🎮 Pygame (2D game development)  
+- 🧠 PyTorch / TensorFlow (neural model development)  
+- 🤖 
+- 📊 Pandas, NumPy, Matplotlib (data processing & visualization)  
+
+---
 
 ## 📊 Evaluation Goals
+- Compare the learning efficiency between the informed and naive agents  
+- Visualize decision paths and in-game behavior  
+- Analyze how the naive agent discovers game mechanics (e.g., pipes, mushrooms)
 
-- Compare the **learning efficiency** between an agent with prior knowledge and one learning from scratch.
-- Visualize agent decision paths and behavior.
-- Analyze how the naive agent discovers mechanics (e.g., learning that pipes are tunnels, mushrooms are boosts).
+---
 
+## 📥 Data & Resources  
+- Levels and objects sourced from public Mario datasets (e.g., HuggingFace, GitHub, Spriters Resource), or  
+- Programmatically generated for simulation  
+- 📄 All third-party resources are credited in `data/README.md`  
 
-## 📥 Data & Resources
+---
 
-The game objects and levels used are either:
-- **Scraped** from public Mario level datasets (e.g., HuggingFace, GitHub, Spriters Resource), or
-- **Programmatically generated** for simulated environments.
+## 🚀 Running the Project
 
-> ⚠️ All external resources are documented in `data/README.md` with proper credits and license info.
-
-## 🚀 Run the Project
-
+### Standard Run:
 ```bash
-git clone https://github.com/yourusername/mario-simulator.git
-cd mario-simulator
-pip install -r requirements.txt
-python src/simulator.py
+$ pip install -r requirements.txt
+$ python main.py
 ```
 
-## 📜 License
+### Windows Standalone Build:
+```bash
+$ pip install pyinstaller
+$ python -m pyinstaller --onefile main.py
+```
 
+---
+
+## 🎮 Controls
+- **Left Arrow (←)**: Move left  
+- **Right Arrow (→)**: Move right  
+- **Spacebar**: Jump  
+- **Shift**: Boost  
+- **Left/Right Mouse Click**: Secret action  
+
+---
+
+## 📷 Current State
+![Current State](img/pics.png "current state")
+
+---
+
+## 📦 Dependencies
+- `pygame`  
+- `scipy`  
+*(plus others listed in `requirements.txt`)*
+
+---
+
+## 📜 License
 This project is for **educational purposes only**.  
 Super Mario Bros is a registered trademark of **Nintendo Co., Ltd.**  
-No commercial use is intended. All rights to original game assets belong to their respective owners.
+No commercial use is intended. All rights to original assets belong to their respective owners.
 
+---
 
-## 📌 Authors
+## 👨‍🎓 Authors
+Project developed as part of the **ML Proof of Concept 2024–2025** course at *Albert Global Data School*:
 
-Project developed as part of the ML Proof of Concept 2024-2025 course – Albert Global Data School by:
-- Florent NEGAF
-- Khadidja ADDI
-- Titouan PERRON
+- Florent NEGAF  
+- Khadidja ADDI  
+- Titouan PERRON  
 
-👨‍🏫 Supervised by Gianluca QUERCINI
+👨‍🏫 **Supervised by**: Gianluca QUERCINI
 
-
+---
