@@ -6,7 +6,7 @@ This project aims to develop an interactive Super Mario Bros simulator integrati
 - **Agent 1 – Informed Agent**: understands game objects (enemies, bonuses, obstacles) and their functions.  
 - **Agent 2 – Naive Agent**: explores the game without prior knowledge, learning everything from scratch.
 
----
+
 
 ## 🧠 Technical Approach
 
@@ -20,7 +20,7 @@ This project aims to develop an interactive Super Mario Bros simulator integrati
 - **Model**: neural network trained purely via reinforcement learning, with no prior knowledge  
 - **Goal**: learn through exploration, like a human discovering the game for the first time
 
----
+
 
 ## 🏗️ Project Architecture & Technologies
 
@@ -31,21 +31,21 @@ This project aims to develop an interactive Super Mario Bros simulator integrati
 - 🤖 
 - 📊 Pandas, NumPy, Matplotlib (data processing & visualization)  
 
----
+
 
 ## 📊 Evaluation Goals
 - Compare the learning efficiency between the informed and naive agents  
 - Visualize decision paths and in-game behavior  
 - Analyze how the naive agent discovers game mechanics (e.g., pipes, mushrooms)
 
----
+
 
 ## 📥 Data & Resources  
 - Levels and objects sourced from public Mario datasets (e.g., HuggingFace, GitHub, Spriters Resource), or  
 - Programmatically generated for simulation  
 - 📄 All third-party resources are credited in `data/README.md`  
 
----
+
 
 ## 🚀 Running the Project
 
@@ -61,7 +61,7 @@ $ pip install pyinstaller
 $ python -m pyinstaller --onefile main.py
 ```
 
----
+
 
 ## 🎮 Controls
 - **Left Arrow (←)**: Move left  
@@ -70,26 +70,26 @@ $ python -m pyinstaller --onefile main.py
 - **Shift**: Boost  
 - **Left/Right Mouse Click**: Secret action  
 
----
+
 
 ## 📷 Current State
-![Current State](img/pics.png "current state")
 
----
+
+
 
 ## 📦 Dependencies
 - `pygame`  
 - `scipy`  
 *(plus others listed in `requirements.txt`)*
 
----
+
 
 ## 📜 License
 This project is for **educational purposes only**.  
 Super Mario Bros is a registered trademark of **Nintendo Co., Ltd.**  
 No commercial use is intended. All rights to original assets belong to their respective owners.
 
----
+
 
 ## 👨‍🎓 Authors
 Project developed as part of the **ML Proof of Concept 2024–2025** course at *Albert Global Data School*:
@@ -100,4 +100,4 @@ Project developed as part of the **ML Proof of Concept 2024–2025** course at *
 
 👨‍🏫 **Supervised by**: Gianluca QUERCINI
 
----
+
