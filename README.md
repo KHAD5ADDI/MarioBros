@@ -11,7 +11,7 @@ This project aims to develop an interactive Super Mario Bros simulator integrati
 ## 🧠 Technical Approach
 
 ### 🕵️‍♂️ Agent 1 – Feature-Informed Learning  
-- **Inputs**: object types and roles, Mario’s state, relative positions  
+- **Inputs**: object types and roles, Mario's state, relative positions  
 - **Model**: neural network + reinforcement learning (e.g., Q-learning or PPO)  
 - **Goal**: optimize performance using semantic features to accelerate learning
 
@@ -30,6 +30,7 @@ This project aims to develop an interactive Super Mario Bros simulator integrati
 - 🧠 PyTorch / TensorFlow (neural model development)  
 - 🤖 
 - 📊 Pandas, NumPy, Matplotlib (data processing & visualization)  
+- 📋 JSON (for game data, level configurations, and agent parameters storage)
 
 
 
@@ -44,6 +45,7 @@ This project aims to develop an interactive Super Mario Bros simulator integrati
 - Levels and objects sourced from public Mario datasets (e.g., HuggingFace, GitHub, Spriters Resource), or  
 - Programmatically generated for simulation  
 - 📄 All third-party resources are credited in `data/README.md`  
+- 🗺️ Level layouts and game configurations stored in JSON format for easy editing and sharing
 
 
 
@@ -80,6 +82,7 @@ $ python -m pyinstaller --onefile main.py
 ## 📦 Dependencies
 - `pygame`  
 - `scipy`  
+- `json` (Python standard library)
 *(plus others listed in `requirements.txt`)*
 
 

@@ -36,7 +36,7 @@ class Button:
         return self.rect.collidepoint(pos)
 
 class Menu:
-    def __init__(self, screen, dashboard, level, sound):
+    def __init__(self, screen, dashboard, level, sound, show_agents=False):
         self.screen = screen
         self.sound = sound
         self.start = False
@@ -69,10 +69,12 @@ class Menu:
         self.loadSettings("./settings.json")
         self.selected_agent = None  # None = jeu normal, "guided" ou "exploratory"
 
-        # Ajouter des boutons pour les agents
+        # Ajouter des boutons pour les agents uniquement si on les affiche
         self.buttons = []
-        self.buttons.append(Button(screen, 320, 280, "Agent Guidé"))
-        self.buttons.append(Button(screen, 320, 330, "Agent Exploratoire"))
+        self.show_agents = show_agents
+        if show_agents:
+            self.buttons.append(Button(screen, 320, 280, "Agent Guidé"))
+            self.buttons.append(Button(screen, 320, 330, "Agent Exploratoire"))
 
     def update(self):
         self.checkInput()
@@ -87,9 +89,10 @@ class Menu:
         else:
             self.drawSettings()
 
-        # Afficher et gérer les boutons des agents
-        for button in self.buttons:
-            button.draw()
+        # Afficher et gérer les boutons des agents uniquement si demandé
+        if self.show_agents:
+            for button in self.buttons:
+                button.draw()
 
     def drawDot(self):
         if self.state == 0:
@@ -236,20 +239,21 @@ class Menu:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
                 # Gestion des clics sur les boutons d'agents
-                for button in self.buttons:
-                    if button.is_clicked(pos):
-                        if button.text == "Agent Guidé":
-                            self.selected_agent = "guided"
-                            self.start = True
-                        elif button.text == "Agent Exploratoire":
-                            self.selected_agent = "exploratory"
-                            self.start = True
+                if self.show_agents:
+                    for button in self.buttons:
+                        if button.is_clicked(pos):
+                            if button.text == "Agent Guidé":
+                                self.selected_agent = "guided"
+                                self.start = True
+                            elif button.text == "Agent Exploratoire":
+                                self.selected_agent = "exploratory"
+                                self.start = True
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     if self.inChoosingLevel or self.inSettings:
                         self.inChoosingLevel = False
                         self.inSettings = False
-                        self.__init__(self.screen, self.dashboard, self.level, self.sound)
+                        self.__init__(self.screen, self.dashboard, self.level, self.sound, self.show_agents)
                     else:
                         pygame.quit()
                         sys.exit()
