@@ -5,6 +5,35 @@ import pygame
 
 from classes.Spritesheet import Spritesheet
 
+# Ajout de la classe Button
+class Button:
+    def __init__(self, screen, x, y, text):
+        self.screen = screen
+        self.x = x
+        self.y = y
+        self.text = text
+        self.width = 200
+        self.height = 50
+        self.rect = pygame.Rect(x - self.width//2, y - self.height//2, self.width, self.height)
+        self.color = (100, 100, 255)
+        self.hover_color = (120, 120, 255)
+        self.text_color = (255, 255, 255)
+        self.font = pygame.font.Font(None, 36)
+        
+    def draw(self):
+        mouse_pos = pygame.mouse.get_pos()
+        if self.rect.collidepoint(mouse_pos):
+            color = self.hover_color
+        else:
+            color = self.color
+            
+        pygame.draw.rect(self.screen, color, self.rect)
+        text_surface = self.font.render(self.text, True, self.text_color)
+        text_rect = text_surface.get_rect(center=self.rect.center)
+        self.screen.blit(text_surface, text_rect)
+        
+    def is_clicked(self, pos):
+        return self.rect.collidepoint(pos)
 
 class Menu:
     def __init__(self, screen, dashboard, level, sound):
@@ -38,6 +67,12 @@ class Menu:
             20, 150, 2, colorkey=[255, 0, 220], ignoreTileSize=True
         )
         self.loadSettings("./settings.json")
+        self.selected_agent = None  # None = jeu normal, "guided" ou "exploratory"
+
+        # Ajouter des boutons pour les agents
+        self.buttons = []
+        self.buttons.append(Button(screen, 320, 280, "Agent Guidé"))
+        self.buttons.append(Button(screen, 320, 330, "Agent Exploratoire"))
 
     def update(self):
         self.checkInput()
@@ -51,6 +86,10 @@ class Menu:
             self.drawMenu()
         else:
             self.drawSettings()
+
+        # Afficher et gérer les boutons des agents
+        for button in self.buttons:
+            button.draw()
 
     def drawDot(self):
         if self.state == 0:
@@ -194,6 +233,17 @@ class Menu:
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                pos = pygame.mouse.get_pos()
+                # Gestion des clics sur les boutons d'agents
+                for button in self.buttons:
+                    if button.is_clicked(pos):
+                        if button.text == "Agent Guidé":
+                            self.selected_agent = "guided"
+                            self.start = True
+                        elif button.text == "Agent Exploratoire":
+                            self.selected_agent = "exploratory"
+                            self.start = True
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     if self.inChoosingLevel or self.inSettings:
