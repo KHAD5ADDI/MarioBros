@@ -43,6 +43,9 @@ class GuidedAgent:
         self.alternating_actions = ['right', 'jump', 'right', 'right']
         self.alternating_index = 0
         
+        # Compteur pour les menus
+        self.menu_action_counter = 0
+        
     def choose_action(self, state):
         """
         Sélectionne une action en fonction de l'état actuel
@@ -50,6 +53,20 @@ class GuidedAgent:
         try:
             # Actions possibles
             actions = ['left', 'right', 'jump', 'idle']
+            
+            # Vérifier l'état du jeu
+            game_state = state.get("game_state", "playing")
+            
+            # Logique spécifique pour le menu
+            if game_state == "menu":
+                return self.handle_menu_action()
+                
+            # Logique pour le game over
+            if game_state == "game_over":
+                # Après game over, préférer l'action jump pour redémarrer
+                return 'jump'
+            
+            # À partir d'ici, on est dans le jeu normal
             
             # Si on est en mode alternance forcée (pour débloquer Mario)
             if self.force_alternate:
@@ -211,6 +228,21 @@ class GuidedAgent:
             print(f"ERREUR dans choose_action: {e}")
             # En cas d'erreur, simplement avancer à droite
             return 'right'
+    
+    def handle_menu_action(self):
+        """
+        Gère les actions spécifiques au menu
+        Utilise une séquence spécifique pour naviguer efficacement dans le menu
+        """
+        # Séquence d'actions pour naviguer dans le menu
+        menu_sequence = ['right', 'jump', 'right', 'right', 'jump']
+        
+        # Incrémenter le compteur et obtenir l'action correspondante
+        action = menu_sequence[self.menu_action_counter % len(menu_sequence)]
+        self.menu_action_counter += 1
+        
+        print(f"Action de menu: {action}, compteur: {self.menu_action_counter}")
+        return action
     
     def distance(self, pos1, pos2):
         """Calcule la distance euclidienne entre deux points"""
