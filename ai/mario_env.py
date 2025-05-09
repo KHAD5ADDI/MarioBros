@@ -3,6 +3,8 @@
 import pygame
 import numpy as np
 import time
+import os
+import cv2
 from classes.Dashboard import Dashboard
 from classes.Level import Level
 from classes.Menu import Menu
@@ -37,6 +39,16 @@ class MarioEnv:
         # Variables pour suivre la progression
         self.last_x_pos = 0
         self.steps_since_progress = 0
+        
+        # Position du checkpoint (à ajuster selon votre niveau)
+        self.checkpoint_position = 3200  # Position X approximative du checkpoint
+        
+        # Compteurs pour les statistiques
+        self.games_played = 0
+        self.max_distance = 0
+        self.total_reward_history = []
+        
+        # Initialiser l'environnement
         self.reset()
 
     def reset(self):
@@ -85,12 +97,92 @@ class MarioEnv:
             self.game_state = "level_start"
             self.level = Level(self.screen, self.sound, self.dashboard)
             levelName = self.menu.levelNames[self.menu.currSelectedLevel-1] if self.menu.inChoosingLevel else "Level1-1"
+            print(f"Chargement du niveau: {levelName}")
             self.level.loadLevel(levelName)
-            self.mario = Mario(80, 50, self.level, self.screen, self.dashboard, self.sound)
+            
+            # Réinitialiser Mario à une position de départ correcte
+            self.mario = Mario(0, 0, self.level, self.screen, self.dashboard, self.sound)
+            
+            # Forcer la position de départ de Mario au début du niveau
+            self.mario.rect.x = 80  # Position X initiale (au début du niveau)
+            self.mario.rect.y = 350  # Position Y initiale (sur le sol)
             self.last_x_pos = self.mario.rect.x
+            
+            # Réinitialiser le compteur de blocage
+            self.steps_since_progress = 0
+            
+            print(f"Mario initialisé à la position: {self.mario.rect.x}, {self.mario.rect.y}")
             return True
         
         return False
+
+    def detect_checkpoint(self):
+        """
+        Détecte si Mario a atteint le checkpoint en utilisant la reconnaissance d'image.
+        Retourne True si le checkpoint est détecté, False sinon.
+        """
+        if self.checkpoint_image is None:
+            return False
+            
+        try:
+            # Capturer l'écran actuel
+            screen_array = pygame.surfarray.array3d(self.screen)
+            
+            # Vérifier que l'écran n'est pas vide
+            if screen_array.shape[0] == 0 or screen_array.shape[1] == 0:
+                print("Écran de jeu vide, impossible de détecter le checkpoint")
+                return False
+                
+            # S'assurer que l'image modèle est plus petite que l'écran
+            screen_height, screen_width = screen_array.shape[0], screen_array.shape[1]
+            template = self.checkpoint_image
+            
+            # Si le template est plus grand que l'écran, le redimensionner
+            if template.shape[0] > screen_height or template.shape[1] > screen_width:
+                print(f"Redimensionnement du template: {template.shape} -> max({screen_width}, {screen_height})")
+                scale = min(screen_width / template.shape[1], screen_height / template.shape[0]) * 0.8
+                new_width = int(template.shape[1] * scale)
+                new_height = int(template.shape[0] * scale)
+                template = cv2.resize(template, (new_width, new_height))
+                print(f"Nouvelles dimensions du template: {template.shape}")
+            
+            # Convertir les images au format compatible avec OpenCV (transposer pour corriger l'orientation)
+            screen_array = np.transpose(screen_array, (1, 0, 2))
+            
+            # Vérifier à nouveau les dimensions
+            print(f"Dimensions de l'écran: {screen_array.shape}")
+            print(f"Dimensions du template: {template.shape}")
+            
+            if template.shape[0] > screen_array.shape[0] or template.shape[1] > screen_array.shape[1]:
+                print("Le template est toujours plus grand que l'écran après redimensionnement")
+                scale = min(screen_array.shape[1] / template.shape[1], screen_array.shape[0] / template.shape[0]) * 0.5
+                new_width = int(template.shape[1] * scale)
+                new_height = int(template.shape[0] * scale)
+                template = cv2.resize(template, (new_width, new_height))
+                print(f"Redimensionnement forcé du template: {template.shape}")
+            
+            # Appliquer la méthode de correspondance de modèle
+            result = cv2.matchTemplate(screen_array, template, cv2.TM_CCOEFF_NORMED)
+            
+            # Trouver la position du meilleur match
+            _, max_val, _, _ = cv2.minMaxLoc(result)
+            
+            print(f"Score de correspondance: {max_val:.4f}")
+            
+            # Si la correspondance est suffisamment bonne, considérer le checkpoint comme détecté
+            threshold = 0.6  # Seuil plus bas pour être plus permissif
+            
+            if max_val >= threshold:
+                print(f"CHECKPOINT DÉTECTÉ! Score de correspondance: {max_val:.4f}")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            print(f"Erreur lors de la détection du checkpoint: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
 
     def handle_gameplay(self, action):
         """Gère les actions pendant le gameplay"""
@@ -152,17 +244,24 @@ class MarioEnv:
             
             # Dessiner un texte d'information pour l'agent IA
             font = pygame.font.Font(None, 20)
-            text = font.render(f"IA Mario - Agent {self.agent_type} - Position: {int(self.mario.rect.x)},{int(self.mario.rect.y)}", True, (255, 255, 255))
-            self.screen.blit(text, (10, 10))
+            stats_text = f"IA Mario - Agent {self.agent_type} - Position: {int(self.mario.rect.x)},{int(self.mario.rect.y)}"
+            self.screen.blit(font.render(stats_text, True, (255, 255, 255)), (10, 10))
             
-            # Dessiner Mario explicitement (la classe Mario n'a pas de méthode draw() directe)
+            # Afficher les statistiques de jeu
+            score_text = f"Parties jouées: {self.games_played} | Score: {self.dashboard.points} | Max distance: {self.max_distance}"
+            self.screen.blit(font.render(score_text, True, (255, 255, 255)), (10, 30))
+            fps_text = f"FPS: {int(self.clock.get_fps())} | Immobile: {self.steps_since_progress}/240 frames"
+            self.screen.blit(font.render(fps_text, True, (255, 255, 255)), (10, 50))
+            
+            # Dessiner Mario explicitement - CORRECTION POUR L'ORIENTATION
             print("Dessin de Mario via goTrait...")
-            # Au lieu d'appeler self.mario.draw(), nous forçons le dessin via le trait d'animation
-            # qui est responsable du rendu de Mario dans le jeu original
             animation = self.mario.traits["goTrait"].animation
-            if self.mario.traits["goTrait"].direction == 1:
+            
+            # Correction pour l'orientation de Mario (il ne doit pas être à l'envers)
+            # Utiliser le heading de Mario plutôt que sa direction de mouvement
+            if self.mario.traits["goTrait"].heading == 1:  # Facing right
                 self.screen.blit(animation.image, (self.mario.rect.x - self.mario.camera.x, self.mario.rect.y))
-            else:
+            else:  # Facing left
                 self.screen.blit(
                     pygame.transform.flip(animation.image, True, False),
                     (self.mario.rect.x - self.mario.camera.x, self.mario.rect.y)
@@ -176,18 +275,34 @@ class MarioEnv:
         # Calculer la récompense
         # Récompense pour avancer
         if self.mario.rect.x > self.last_x_pos + 1:
-            reward += (self.mario.rect.x - self.last_x_pos) * 0.1
+            progress = self.mario.rect.x - self.last_x_pos
+            reward += progress * 0.1
             self.steps_since_progress = 0
+            
+            # Mettre à jour la distance maximale
+            if self.mario.rect.x > self.max_distance:
+                self.max_distance = self.mario.rect.x
         else:
             self.steps_since_progress += 1
         
-        # Pénalité si Mario reste bloqué trop longtemps
-        if self.steps_since_progress > 60:
+        # Punir Mario s'il reste immobile trop longtemps (4 secondes = 240 frames à 60 FPS)
+        if self.steps_since_progress > 240:  # 4 secondes à 60 FPS
+            print("Mario est resté immobile trop longtemps - MORT AUTOMATIQUE!")
+            reward -= 100
+            self.game_state = "game_over"
+            self.done = True
+            self.games_played += 1
+            
+            # Afficher un message d'erreur sur l'écran
+            font = pygame.font.Font(None, 48)
+            death_text = font.render("MARIO EST TROP LENT!", True, (255, 0, 0))
+            text_rect = death_text.get_rect(center=(self.screen.get_width()//2, self.screen.get_height()//2))
+            self.screen.blit(death_text, text_rect)
+            pygame.display.update()
+            time.sleep(1)  # Afficher le message pendant 1 seconde
+        # Pénalité moins sévère si Mario commence à être immobile
+        elif self.steps_since_progress > 60:
             reward -= 1
-            if self.steps_since_progress > 120:
-                # Action aléatoire pour débloquer
-                self.mario.traits["goTrait"].direction = np.random.choice([-1, 1])
-                self.mario.traits["jumpTrait"].start = True
         
         # Mettre à jour la dernière position x
         self.last_x_pos = self.mario.rect.x
@@ -204,12 +319,30 @@ class MarioEnv:
             reward -= 100
             self.game_state = "game_over"
             self.done = True
+            self.games_played += 1
         
         # Vérifier si Mario est tombé dans un trou
         if self.mario.rect.y > 450:
             reward -= 100
             self.game_state = "game_over"
             self.done = True
+            self.games_played += 1
+        
+        # Vérifier si Mario a atteint le checkpoint
+        if self.mario.rect.x >= self.checkpoint_position:
+            print("VICTOIRE! Mario a atteint le checkpoint!")
+            reward += 1000  # Grosse récompense pour avoir atteint le checkpoint
+            self.game_state = "checkpoint_reached"
+            self.done = True
+            self.games_played += 1
+            
+            # Afficher un message de victoire
+            font = pygame.font.Font(None, 48)
+            victory_text = font.render("CHECKPOINT ATTEINT!", True, (255, 255, 0))
+            text_rect = victory_text.get_rect(center=(self.screen.get_width()//2, self.screen.get_height()//2))
+            self.screen.blit(victory_text, text_rect)
+            pygame.display.update()
+            time.sleep(2)  # Afficher le message pendant 2 secondes
         
         print(f"===== FIN HANDLE_GAMEPLAY =====")
         return reward
@@ -235,10 +368,21 @@ class MarioEnv:
         elif self.game_state == "playing":
             reward += self.handle_gameplay(action)
         
-        elif self.game_state == "game_over":
+        elif self.game_state in ["game_over", "checkpoint_reached"]:
             # Attendre un moment avant de réinitialiser
             time.sleep(1)
             self.done = True
+            
+            # Ajouter la récompense totale à l'historique
+            self.total_reward_history.append(self.total_reward)
+            if len(self.total_reward_history) > 10:
+                self.total_reward_history.pop(0)
+                
+            # Afficher des statistiques
+            if len(self.total_reward_history) > 0:
+                avg_reward = sum(self.total_reward_history) / len(self.total_reward_history)
+                print(f"Parties jouées: {self.games_played}, Récompense moyenne: {avg_reward:.2f}")
+                print(f"Distance maximale atteinte: {self.max_distance}")
         
         # Mettre à jour l'écran
         pygame.display.update()

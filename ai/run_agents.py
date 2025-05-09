@@ -14,19 +14,19 @@ from ai.agents.GuidedAgent import GuidedAgent
 from ai.agents.ExploratoryAgent import ExploratoryAgent
 from utils import suppress_pygame_warnings
 
-def run_ai_mario(agent_type="guided", max_games=10, return_to_menu=True):
+def run_ai_mario(agent_type="guided", max_games=None, return_to_menu=True):
     """
-    Fonction principale qui exécute Mario avec un agent IA.
+    Fonction principale qui exécute Mario avec un agent IA en mode apprentissage continu.
     
     Args:
         agent_type (str): Le type d'agent IA à utiliser ('guided' ou 'exploratory')
-        max_games (int): Nombre maximum de parties à jouer
+        max_games (int): Nombre maximum de parties à jouer (None = illimité)
         return_to_menu (bool): Si True, retourne 'menu_principal' à la fin
         
     Returns:
         str: 'menu_principal' si return_to_menu est True, sinon None
     """
-    print(f"Démarrage de Super Mario avec agent {agent_type}...")
+    print(f"Démarrage de Super Mario avec agent {agent_type} en mode apprentissage continu...")
     
     # Supprimer les avertissements libpng
     stderr_redirect = suppress_pygame_warnings()
@@ -47,115 +47,118 @@ def run_ai_mario(agent_type="guided", max_games=10, return_to_menu=True):
     # Variables pour suivre l'état du jeu
     total_games = 0
     
-    # Boucle principale du jeu
-    while total_games < max_games:
-        print(f"\n--- Partie {total_games + 1} ---")
-        total_games += 1
-        
-        # Réinitialiser l'environnement
-        state = env.reset()
-        done = False
-        steps = 0
-        total_reward = 0
-        
-        # Naviguer d'abord dans le menu jusqu'au niveau
-        print("Navigation dans les menus...")
-        # Forcer certaines actions pour naviguer à travers le menu
-        menu_actions = ['right', 'right', 'jump', 'jump']
-        for action in menu_actions:
-            next_state, reward, done, info = env.step(action)
-            pygame.time.delay(500)  # Attendre pour voir les actions se dérouler
-            state = next_state
-        
-        # Attendre que le niveau se charge complètement
-        print("Chargement du niveau en cours...")
-        pygame.time.delay(2000)  # Attendre 2 secondes pour que le niveau se charge
-        
-        # Afficher un message sur l'écran indiquant que le jeu va commencer
-        font = pygame.font.Font(None, 36)
-        text = font.render("Prêt? Le jeu commence dans...", True, (255, 255, 255))
-        env.screen.blit(text, (160, 200))
-        pygame.display.update()
-        
-        # Compte à rebours avant de commencer
-        for i in range(3, 0, -1):
-            # Effacer l'écran
-            env.screen.fill((104, 136, 252))
-            text = font.render(f"{i}...", True, (255, 255, 255))
-            env.screen.blit(text, (310, 200))
-            pygame.display.update()
-            pygame.time.delay(1000)  # 1 seconde entre chaque chiffre
-        
-        print(f"Début du jeu avec l'agent {agent_type}...")
-        # Boucle de jeu principale
-        while not done and steps < 2000:  # Limite de pas pour éviter les boucles infinies
-            # Gérer les événements pygame pour éviter de bloquer l'interface
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        print("Jeu interrompu par l'utilisateur")
-                        env.close()
-                        return 'menu_principal' if return_to_menu else None
+    try:
+        # Boucle principale du jeu - continue jusqu'à max_games ou indéfiniment si max_games est None
+        while max_games is None or total_games < max_games:
+            print(f"\n--- Partie {total_games + 1} ---")
+            total_games += 1
             
-            # Choisir l'action avec l'agent ou aléatoirement
-            if agent:
-                action = agent.choose_action(state)
-            else:
-                # Mode test: actions aléatoires
-                action = env.actions[random.randint(0, len(env.actions)-1)]
+            # Réinitialiser l'environnement
+            state = env.reset()
+            done = False
+            steps = 0
+            total_reward = 0
+            last_state = None
+            last_action = None
             
-            # Exécuter l'action dans l'environnement
-            next_state, reward, done, info = env.step(action)
-            total_reward += reward
+            # Naviguer d'abord dans le menu jusqu'au niveau
+            print("Navigation dans les menus...")
+            menu_actions = ['right', 'jump']  # Actions simplifiées pour le menu
+            for action in menu_actions:
+                next_state, reward, done, info = env.step(action)
+                pygame.time.delay(300)  # Temps d'attente réduit pour accélérer
+                state = next_state
             
-            # Mettre à jour l'état pour la prochaine itération
-            state = next_state
-            steps += 1
+            # Attendre que le niveau se charge
+            pygame.time.delay(1000)  # Temps d'attente réduit pour accélérer
             
-            # Ralentir un peu pour que le jeu soit visible
-            pygame.time.delay(10)
-            
-            # Afficher des statistiques toutes les 100 étapes
-            if steps % 100 == 0:
-                print(f"Étapes: {steps}, Récompense totale: {total_reward:.2f}")
-        
-        # Fin de partie
-        if done:
-            if hasattr(state, "get") and "mario_pos" in state and state["mario_pos"][1] > 450:
-                print(f"Mario est tombé dans un trou! Récompense: {total_reward:.2f}")
-            else:
-                print(f"Partie terminée! Récompense totale: {total_reward:.2f}")
-            
-            # Afficher un message à l'écran
-            font = pygame.font.Font(None, 36)
-            text1 = font.render("Partie terminée!", True, (255, 255, 255))
-            text2 = font.render("Appuyez sur ESPACE pour continuer, ESC pour quitter", True, (255, 255, 255))
-            env.screen.blit(text1, (200, 200))
-            env.screen.blit(text2, (50, 250))
-            pygame.display.update()
-            
-            # Attendre l'action de l'utilisateur
-            waiting = True
-            while waiting:
+            print(f"Début du jeu avec l'agent {agent_type}...")
+            # Boucle de jeu principale
+            while not done and steps < 5000:  # Limite augmentée pour permettre des niveaux plus longs
+                # Gérer les événements pygame pour éviter de bloquer l'interface
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         pygame.quit()
                         sys.exit()
                     elif event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_SPACE:
-                            waiting = False  # Continuer à la prochaine partie
-                        elif event.key == pygame.K_ESCAPE:
+                        if event.key == pygame.K_ESCAPE:
+                            print("Jeu interrompu par l'utilisateur")
                             env.close()
                             return 'menu_principal' if return_to_menu else None
-                pygame.time.delay(100)
-        
-        # Attendre un peu avant de commencer une nouvelle partie
-        pygame.time.delay(2000)
+                
+                # Choisir l'action avec l'agent et mettre à jour l'agent avec l'expérience précédente
+                if agent:
+                    # Entraîner l'agent avec l'expérience précédente
+                    if last_state is not None and last_action is not None:
+                        agent.train(last_state, last_action, total_reward, state, done)
+                    
+                    # Choisir la prochaine action
+                    action = agent.choose_action(state)
+                else:
+                    # Mode test: actions aléatoires
+                    action = env.actions[random.randint(0, len(env.actions)-1)]
+                
+                # Sauvegarder l'état et l'action actuels
+                last_state = state
+                last_action = action
+                
+                # Exécuter l'action dans l'environnement
+                next_state, reward, done, info = env.step(action)
+                total_reward += reward
+                
+                # Mettre à jour l'état pour la prochaine itération
+                state = next_state
+                steps += 1
+                
+                # Ralentir un peu pour que le jeu soit visible mais pas trop lent
+                pygame.time.delay(5)  # Délai minimal pour permettre un apprentissage rapide
+                
+                # Afficher des statistiques moins fréquemment pour optimiser les performances
+                if steps % 200 == 0:
+                    print(f"Étapes: {steps}, Récompense totale: {total_reward:.2f}")
+            
+            # Fin de partie - s'assurer que l'agent apprend aussi de la dernière expérience
+            if agent and last_state is not None and last_action is not None:
+                # Une grande récompense négative si Mario est mort, positive s'il a atteint le checkpoint
+                if info["game_state"] == "checkpoint_reached":
+                    final_reward = 1000
+                elif info["game_state"] == "game_over":
+                    final_reward = -100
+                else:
+                    final_reward = 0
+                
+                agent.train(last_state, last_action, final_reward, state, done)
+            
+            # Afficher les statistiques de la partie
+            if done:
+                result_message = "Checkpoint atteint!" if info["game_state"] == "checkpoint_reached" else "Mario est mort"
+                print(f"Partie terminée! {result_message}")
+                print(f"Statistiques: {steps} étapes, {total_reward:.2f} points")
+                
+                # Message temporaire à l'écran indiquant la prochaine partie
+                font = pygame.font.Font(None, 36)
+                text = font.render(f"Partie {total_games} terminée, prochaine partie...", True, (255, 255, 255))
+                env.screen.fill((0, 0, 0))
+                env.screen.blit(text, (100, 200))
+                pygame.display.update()
+                
+                # Vérifier si l'utilisateur veut quitter
+                for i in range(30):  # 3 secondes pour permettre à l'utilisateur d'annuler
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            env.close()
+                            return 'menu_principal' if return_to_menu else None
+                        elif event.type == pygame.KEYDOWN:
+                            if event.key == pygame.K_ESCAPE:
+                                env.close()
+                                return 'menu_principal' if return_to_menu else None
+                    pygame.time.delay(100)
+            
+    except KeyboardInterrupt:
+        print("Apprentissage interrompu par l'utilisateur")
+    finally:
+        # Fermer l'environnement proprement
+        env.close()
+        print(f"Apprentissage terminé après {total_games} parties.")
     
-    # Fermer l'environnement
-    env.close()
-    print("Toutes les parties terminées.")
     return 'menu_principal' if return_to_menu else None
