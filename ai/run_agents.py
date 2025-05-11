@@ -63,7 +63,11 @@ def run_ai_mario(agent_type="guided", max_games=None, return_to_menu=True):
             
             # Naviguer d'abord dans le menu jusqu'au niveau
             print("Navigation dans les menus...")
-            menu_actions = ['right', 'jump']  # Actions simplifiées pour le menu
+            menu_actions = ['right', 'select']  # Actions simplifiées pour le menu
+            for action in menu_actions:
+                next_state, reward, done, info = env.step(action)
+                pygame.time.delay(300)  # Temps d'attente réduit pour accélérer
+                state = next_state
             for action in menu_actions:
                 next_state, reward, done, info = env.step(action)
                 pygame.time.delay(300)  # Temps d'attente réduit pour accélérer

@@ -80,6 +80,8 @@ class MarioEnv:
         elif action == 'left':
             key_event = pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_LEFT})
         elif action == 'jump':
+            key_event = pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_SPACE})
+        elif action == 'select':
             key_event = pygame.event.Event(pygame.KEYDOWN, {'key': pygame.K_RETURN})
         elif action == 'idle':
             return False  # Aucune action

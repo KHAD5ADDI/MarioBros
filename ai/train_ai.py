@@ -15,6 +15,8 @@ q_table = {}
 def get_state_key(state):
     return tuple(np.round(state, 1))  # Arrondi pour réduire l'espace d'état
 
+jump_frames = 0  # Compteur pour maintenir le saut actif
+
 for episode in range(episodes):
     state = env.reset()
     state_key = get_state_key(state)
@@ -24,16 +26,23 @@ for episode in range(episodes):
 
     while not done:
         # Choisir l'action
-        if np.random.rand() < epsilon:
+        if jump_frames > 0:
+            action = 'jump'  # Maintenir l'action de saut
+            jump_frames -= 1
+        elif np.random.rand() < epsilon:
             action = np.random.choice(actions)
         else:
             q_vals = [q_table.get((state_key, a), 0) for a in actions]
             action = actions[np.argmax(q_vals)]
 
+        # Si l'action choisie est 'jump', maintenir le saut pendant 25 frames
+        if action == 'jump':
+            jump_frames = 120
+
         # Exécuter l’action
         next_state, reward, done, _ = env.step(action)
         env.render()  # Affiche le jeu à chaque frame
-        time.sleep(0.02)  # Pour ralentir et rendre visible
+        time.sleep(0.2)  # Pour ralentir et rendre visible
 
         next_state_key = get_state_key(next_state)
 
