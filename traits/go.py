@@ -16,13 +16,19 @@ class GoTrait:
 
     def update(self):
         if self.boost:
-            self.maxVel = 4.0  # Réduit de 5.0 à 4.0 pixels par frame (vitesse max)
+            self.maxVel = 4.0  # Vitesse maximale en mode boost
             self.animation.deltaTime = 4
         else:
             self.animation.deltaTime = 7
-            if abs(self.entity.vel.x) > 3.2:  # Restauré à la valeur originale de 3.2
-                self.entity.vel.x = 3.2 * self.heading
-            self.maxVel = 3.2  # Restauré à la valeur originale de 3.2
+            self.maxVel = 3.2  # Vitesse normale
+
+        # Vérifier et limiter la vitesse à 3.3 pixels par frame maximum
+        # sans tuer Mario, juste ralentir si nécessaire
+        MAX_SAFE_SPEED = 3.3  # Vitesse maximale autorisée
+        if abs(self.entity.vel.x) > MAX_SAFE_SPEED:
+            # Ralentir Mario en respectant sa direction
+            self.entity.vel.x = MAX_SAFE_SPEED * (1 if self.entity.vel.x > 0 else -1)
+            print(f"Vitesse limitée à {MAX_SAFE_SPEED} pixels/frame")
 
         if self.direction != 0:
             self.heading = self.direction
@@ -32,6 +38,10 @@ class GoTrait:
             else:
                 if self.entity.vel.x > -self.maxVel:
                     self.entity.vel.x += self.accelVel * self.heading
+
+            # Vérifier à nouveau la limite de vitesse après l'accélération
+            if abs(self.entity.vel.x) > MAX_SAFE_SPEED:
+                self.entity.vel.x = MAX_SAFE_SPEED * (1 if self.entity.vel.x > 0 else -1)
 
             if not self.entity.inAir:
                 self.animation.update()
@@ -57,9 +67,21 @@ class GoTrait:
         self.update()
 
     def drawEntity(self):
-        if self.heading == 1:
-            self.screen.blit(self.animation.image, self.entity.getPos())
-        elif self.heading == -1:
-            self.screen.blit(
-                flip(self.animation.image, True, False), self.entity.getPos()
-            )
+        # Obtenir la position actuelle de la hitbox
+        pos = self.entity.getPos()
+        
+        # Calculer la position exacte pour le rendu du sprite
+        # en tenant compte des potentielles différences de dimensions
+        sprite_width = self.animation.image.get_width()
+        sprite_height = self.animation.image.get_height()
+        rect_width = self.entity.rect.width
+        rect_height = self.entity.rect.height
+        
+        # Position exacte pour que l'image suive parfaitement la hitbox
+        sprite_x = pos[0]
+        sprite_y = pos[1] + rect_height - sprite_height
+        
+        # Afficher le sprite à la position calculée
+        # Ne pas faire de traitement différent selon la direction puisque 
+        # nous utilisons une image fixe sans animation
+        self.screen.blit(self.animation.image, (sprite_x, sprite_y))

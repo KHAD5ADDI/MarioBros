@@ -13,25 +13,49 @@ from traits.go import GoTrait
 from traits.jump import JumpTrait
 from classes.Pause import Pause
 
+# Définir la classe StaticImage avant de l'utiliser
+class StaticImage:
+    """Classe simplifiée remplaçant l'animation par une image fixe"""
+    def __init__(self, image):
+        self.image = image
+        self.deltaTime = 0
+    
+    def update(self):
+        # Ne fait rien car c'est une image statique
+        pass
+    
+    def idle(self):
+        # Ne fait rien car c'est une image statique
+        pass
+    
+    def inAir(self):
+        # Ne fait rien car c'est une image statique
+        pass
+
 spriteCollection = Sprites().spriteCollection
-smallAnimation = Animation(
-    [
-        spriteCollection["mario_run1"].image,
-        spriteCollection["mario_run2"].image,
-        spriteCollection["mario_run3"].image,
-    ],
-    spriteCollection["mario_idle"].image,
-    spriteCollection["mario_jump"].image,
-)
-bigAnimation = Animation(
-    [
-        spriteCollection["mario_big_run1"].image,
-        spriteCollection["mario_big_run2"].image,
-        spriteCollection["mario_big_run3"].image,
-    ],
-    spriteCollection["mario_big_idle"].image,
-    spriteCollection["mario_big_jump"].image,
-)
+# Remplacer les animations par des images fixes
+smallStaticImage = StaticImage(spriteCollection["mario_idle"].image)
+bigStaticImage = StaticImage(spriteCollection["mario_big_idle"].image)
+
+# Anciennes animations (commentées pour référence)
+# smallAnimation = Animation(
+#     [
+#         spriteCollection["mario_run1"].image,
+#         spriteCollection["mario_run2"].image,
+#         spriteCollection["mario_run3"].image,
+#     ],
+#     spriteCollection["mario_idle"].image,
+#     spriteCollection["mario_jump"].image,
+# )
+# bigAnimation = Animation(
+#     [
+#         spriteCollection["mario_big_run1"].image,
+#         spriteCollection["mario_big_run2"].image,
+#         spriteCollection["mario_big_run3"].image,
+#     ],
+#     spriteCollection["mario_big_idle"].image,
+#     spriteCollection["mario_big_jump"].image,
+# )
 
 
 class Mario(EntityBase):
@@ -46,7 +70,7 @@ class Mario(EntityBase):
         self.invincibilityFrames = 0
         self.traits = {
             "jumpTrait": JumpTrait(self),
-            "goTrait": GoTrait(smallAnimation, screen, self.camera, self),
+            "goTrait": GoTrait(smallStaticImage, screen, self.camera, self),
             "bounceTrait": bounceTrait(self),
         }
 
@@ -129,7 +153,7 @@ class Mario(EntityBase):
                 self.gameOver()
             elif self.powerUpState == 1:
                 self.powerUpState = 0
-                self.traits['goTrait'].updateAnimation(smallAnimation)
+                self.traits['goTrait'].updateAnimation(smallStaticImage)
                 x, y = self.rect.x, self.rect.y
                 self.rect = pygame.Rect(x, y + 32, 32, 32)
                 self.invincibilityFrames = 60
@@ -183,6 +207,6 @@ class Mario(EntityBase):
         if self.powerUpState == 0:
             if powerupID == 1:
                 self.powerUpState = 1
-                self.traits['goTrait'].updateAnimation(bigAnimation)
+                self.traits['goTrait'].updateAnimation(bigStaticImage)
                 self.rect = pygame.Rect(self.rect.x, self.rect.y-32, 32, 64)
                 self.invincibilityFrames = 20
