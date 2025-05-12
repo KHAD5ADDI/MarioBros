@@ -200,6 +200,9 @@ class MarioEnv:
             self.mario.traits["goTrait"].direction = 1
         elif action == 'jump':
             self.mario.traits["jumpTrait"].start = True
+            # Appeler explicitement la méthode jump() pour que Mario saute réellement
+            if hasattr(self.mario.traits["jumpTrait"], "jump"):
+                self.mario.traits["jumpTrait"].jump(self.mario)
         elif action == 'idle':
             self.mario.traits["goTrait"].direction = 0
         

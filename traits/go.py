@@ -8,7 +8,7 @@ class GoTrait:
         self.heading = 1
         self.accelVel = 0.4
         self.decelVel = 0.25
-        self.maxVel = 3.0
+        self.maxVel = 3.0  # Vitesse initiale inchangée
         self.screen = screen
         self.boost = False
         self.camera = camera
@@ -16,13 +16,13 @@ class GoTrait:
 
     def update(self):
         if self.boost:
-            self.maxVel = 5.0
+            self.maxVel = 4.0  # Réduit de 5.0 à 4.0 pixels par frame (vitesse max)
             self.animation.deltaTime = 4
         else:
             self.animation.deltaTime = 7
-            if abs(self.entity.vel.x) > 3.2:
+            if abs(self.entity.vel.x) > 3.2:  # Restauré à la valeur originale de 3.2
                 self.entity.vel.x = 3.2 * self.heading
-            self.maxVel = 3.2
+            self.maxVel = 3.2  # Restauré à la valeur originale de 3.2
 
         if self.direction != 0:
             self.heading = self.direction
