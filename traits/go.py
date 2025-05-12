@@ -6,9 +6,9 @@ class GoTrait:
         self.animation = animation
         self.direction = 0
         self.heading = 1
-        self.accelVel = 0.4
-        self.decelVel = 0.25
-        self.maxVel = 3.0  # Vitesse initiale inchangée
+        self.accelVel = 0.2  # Réduit de 0.4 à 0.2 pour une accélération plus douce
+        self.decelVel = 0.15  # Réduit de 0.25 à 0.15 pour une décélération plus douce
+        self.maxVel = 2.5  # Réduit de 3.0 à 2.5 pour une vitesse maximale plus basse
         self.screen = screen
         self.boost = False
         self.camera = camera

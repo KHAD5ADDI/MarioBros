@@ -193,18 +193,35 @@ class MarioEnv:
         print(f"===== DÉBUT HANDLE_GAMEPLAY =====")
         print(f"Action: {action}")
         
+        # Réinitialiser TOUTES les actions à chaque frame
+        self.mario.traits["goTrait"].direction = 0
+        self.mario.traits["jumpTrait"].start = False  # Important: reset jump state
+        
         # Simuler les touches de clavier pour contrôler Mario
         if action == 'left':
             self.mario.traits["goTrait"].direction = -1
+            print("Mario se déplace vers la gauche")
         elif action == 'right':
             self.mario.traits["goTrait"].direction = 1
+            print("Mario se déplace vers la droite")
         elif action == 'jump':
+            # Important: définir start à True UNIQUEMENT pour l'action de saut
             self.mario.traits["jumpTrait"].start = True
             # Appeler explicitement la méthode jump() pour que Mario saute réellement
             if hasattr(self.mario.traits["jumpTrait"], "jump"):
-                self.mario.traits["jumpTrait"].jump(self.mario)
+                self.mario.traits["jumpTrait"].jump(True)  # Passer True pour indiquer que le saut est activé
+            print("Mario saute")
         elif action == 'idle':
-            self.mario.traits["goTrait"].direction = 0
+            # Ne rien faire, toutes les actions sont déjà réinitialisées
+            print("Mario est immobile")
+        
+        # Force exécution des traits pour appliquer immédiatement les actions
+        self.mario.updateTraits()
+        
+        # Réinitialiser explicitement l'état de saut après la mise à jour
+        # pour éviter que le saut ne se répète automatiquement
+        if action != 'jump':
+            self.mario.traits["jumpTrait"].start = False
         
         # Réinitialiser le saut si Mario est au sol
         if self.mario.onGround:
