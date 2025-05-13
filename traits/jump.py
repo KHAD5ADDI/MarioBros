@@ -1,15 +1,15 @@
 class JumpTrait:
     def __init__(self, entity):
-        self.verticalSpeed = -12  # Restauré à la valeur originale
-        self.jumpHeight = 120     # Restauré à la valeur originale
+        self.verticalSpeed = -14  # Augmenté pour un saut encore plus haut
+        self.jumpHeight = 160   # Augmenté pour une hauteur maximale plus importante
         self.entity = entity
         self.initalHeight = 384
         self.deaccelerationHeight = self.jumpHeight - ((self.verticalSpeed*self.verticalSpeed)/(2*self.entity.gravity))
-        self.jumpCooldown = 0    # Conservation du cooldown pour limiter la fréquence des sauts
-        self.jumpCooldownTime = 45  # Augmenté pour limiter encore plus la fréquence des sauts
+        self.jumpCooldown = 0    
+        self.jumpCooldownTime = 30
 
     def jump(self, jumping):
-        # Vérifier le cooldown du saut - seule modification conservée de la version précédente
+        # Vérifier le cooldown du saut
         if self.jumpCooldown > 0:
             self.jumpCooldown -= 1
             return  # Ne pas sauter pendant le cooldown
@@ -21,11 +21,13 @@ class JumpTrait:
                 self.entity.inAir = True
                 self.initalHeight = self.entity.rect.y
                 self.entity.inJump = True
-                self.entity.obeyGravity = False  # always reach maximum height
-                self.jumpCooldown = self.jumpCooldownTime  # Activer le cooldown après un saut
+                # Activons toujours la gravité pour un saut plus naturel
+                self.entity.obeyGravity = True  
+                self.jumpCooldown = self.jumpCooldownTime
 
         if self.entity.inJump:
-            if (self.initalHeight-self.entity.rect.y) >= self.deaccelerationHeight or self.entity.vel.y == 0:
+            # Permettre à la gravité d'agir plus rapidement sur Mario
+            if (self.initalHeight-self.entity.rect.y) >= self.deaccelerationHeight or self.entity.vel.y >= 0:
                 self.entity.inJump = False
                 self.entity.obeyGravity = True
 

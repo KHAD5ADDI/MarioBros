@@ -197,18 +197,18 @@ class GuidedAgent:
             action_counter = getattr(self, 'action_counter', 0)
             self.action_counter = action_counter + 1
             
-            # Forcer un mouvement vers la droite toutes les 3 actions
+            # Forcer un mouvement vers la droite presque systématiquement (sauf en cas d'obstacle)
             if self.action_counter % 3 == 0:
                 print("FORÇAGE DE DÉPLACEMENT VERS LA DROITE")
                 self.action_counter = 0
                 self.last_action = 'right'
                 return 'right'
             
-            # Ensuite, parfois forcer un saut, mais moins souvent (toutes les 7 actions)
-            if self.action_counter % 7 == 0:
-                print("FORÇAGE DE SAUT OCCASIONNEL")
-                self.last_action = 'jump'
-                return 'jump'
+            # SUPPRIMÉ: Ne plus forcer de saut occasionnel
+            # if self.action_counter % 7 == 0:
+            #     print("FORÇAGE DE SAUT OCCASIONNEL")
+            #     self.last_action = 'jump'
+            #     return 'jump'
             
             # Si on est en mode alternance forcée (pour débloquer Mario)
             if self.force_alternate:
@@ -224,13 +224,13 @@ class GuidedAgent:
             
             # Explorer avec une certaine probabilité (epsilon-greedy)
             if random.random() < self.exploration_rate:
-                # Équilibrer la probabilité de sauter vs avancer pendant l'exploration
-                jump_probability = 0.4  # Réduit à 40% de chances de sauter
+                # Privilégier davantage le mouvement vers la droite, réduire les sauts en exploration
+                jump_probability = 0.2  # Réduit à 20% de chances de sauter
                 if random.random() < jump_probability:
                     action = 'jump'
                 else:
                     # Favoriser fortement le mouvement vers la droite
-                    action = random.choice(['right', 'right', 'right', 'right', 'left'])  # 80% chance de droite
+                    action = random.choice(['right', 'right', 'right', 'right', 'right', 'left'])  # 85% chance de droite
                 print(f"Action aléatoire: {action}")
                 return action
             
@@ -245,11 +245,11 @@ class GuidedAgent:
             is_on_ground = mario_vel[1] == 0
             print(f"Mario est au sol: {is_on_ground}")
             
-            # Favoriser le saut si Mario est au sol, mais avec une probabilité réduite
-            if is_on_ground and random.random() < 0.3:  # Réduit de 70% à 30% de chance de sauter si au sol
-                print("Saut favorisé car Mario est au sol!")
-                self.last_action = 'jump'
-                return 'jump'
+            # SUPPRIMÉ: Ne plus favoriser le saut systématiquement quand Mario est au sol
+            # if is_on_ground and random.random() < 0.3:
+            #     print("Saut favorisé car Mario est au sol!")
+            #     self.last_action = 'jump'
+            #     return 'jump'
             
             # Afficher des informations de débogage (réduites)
             print(f"Position: {mario_pos}, Vitesse: {mario_vel}, Objets: {len(nearby_objects)}")
@@ -257,15 +257,15 @@ class GuidedAgent:
             # Calculer les scores pour chaque action avec un meilleur équilibre
             action_scores = {
                 'left': 0,
-                'right': self.weights["forward_progress"] * 2.0,  # Doublé pour favoriser l'avancement
-                'jump': 3.0,  # Valeur de base du saut réduite de 6.0 à 3.0
+                'right': self.weights["forward_progress"] * 2.5,  # Augmenté pour privilégier l'avancement
+                'jump': -2.0,  # Valeur de base négative pour éviter les sauts inutiles
                 'idle': 0
             }
             
             # Limiter le cooldown du saut pour permettre des sauts mais pas trop fréquents
             if self.jump_cooldown > 0:
                 self.jump_cooldown -= 1
-                action_scores['jump'] -= 1.0
+                action_scores['jump'] -= 5.0  # Pénalité plus forte pendant le cooldown
             
             # Détecter les ennemis à l'avant
             enemies_ahead = False
@@ -275,6 +275,7 @@ class GuidedAgent:
             ground_tiles_ahead = []
             ground_tiles_below = []
             coins_above = False
+            blocks_ahead = False  # NOUVEAU: Détection des blocs devant Mario
             
             for obj in nearby_objects:
                 rel_x, rel_y, obj_type = obj
@@ -286,10 +287,10 @@ class GuidedAgent:
                         if rel_x < 40:  # Très proche
                             enemies_close = True
                             action_scores['jump'] += self.weights["jump_over_enemy"] * 2.0
-                            print("Ennemi très proche, je saute!")
+                            print("OBSTACLE: Ennemi très proche, je saute!")
                         else:
                             action_scores['jump'] += self.weights["jump_over_enemy"] * 1.5
-                            print("Ennemi détecté devant, je saute!")
+                            print("OBSTACLE: Ennemi détecté devant, je saute!")
                 
                 # Détecter les objets à collecter
                 if any(item in obj_type for item in ["Coin", "CoinBox", "RandomBox", "Mushroom"]):
@@ -297,13 +298,19 @@ class GuidedAgent:
                     if abs(rel_x) < 16 and -150 < rel_y < -20:
                         coins_above = True
                         action_scores['jump'] += self.weights["distance_to_coin"] * 2.0
-                        print("Bonus au-dessus, je saute!")
+                        print("OBSTACLE: Bonus au-dessus, je saute!")
                     # Item devant Mario
                     elif 0 < rel_x < 100:
-                        action_scores['right'] += self.weights["distance_to_coin"] * 1.5  # Augmenté pour favoriser l'avancement
+                        action_scores['right'] += self.weights["distance_to_coin"] * 1.5
                 
-                # Identifier les tuiles du sol
-                if "Tile" in obj_type:
+                # NOUVEAU: Détecter les blocs devant Mario qui nécessitent un saut
+                if "Tile" in obj_type or "Block" in obj_type or "Brick" in obj_type:
+                    # Tuiles directement devant Mario à hauteur de son corps
+                    if 10 < rel_x < 40 and -40 < rel_y < 5:
+                        blocks_ahead = True
+                        action_scores['jump'] += 10.0  # Bonus important pour sauter
+                        print("OBSTACLE: Bloc devant Mario, je dois sauter!")
+                    
                     # Tuiles directement sous Mario
                     if abs(rel_x) < 16 and 0 < rel_y < 32:
                         ground_tiles_below.append(obj)
@@ -315,9 +322,17 @@ class GuidedAgent:
             if len(ground_tiles_ahead) == 0 and mario_vel[0] >= 0:
                 # Pas de sol détecté devant = probablement un trou
                 action_scores['jump'] += self.weights["jump_over_gap"] * 3
-                print("Trou détecté, je saute!")
+                print("OBSTACLE: Trou détecté, je saute!")
                 # Forcer le saut directement si un trou est détecté
                 return 'jump'
+            
+            # Si un obstacle est détecté devant, sauter est prioritaire
+            if blocks_ahead or enemies_ahead:
+                print("Obstacle confirmé devant Mario, saut nécessaire!")
+                if self.jump_cooldown <= 0 and is_on_ground:
+                    self.last_action = 'jump'
+                    self.jump_cooldown = 15  # Empêcher les sauts répétés
+                    return 'jump'
             
             # Gérer le cas où Mario est bloqué
             current_pos = tuple(mario_pos)
@@ -347,24 +362,24 @@ class GuidedAgent:
             else:
                 self.stuck_counter = max(0, self.stuck_counter - 1)
             
-            # Ajouter un facteur aléatoire pour les sauts exploratoires, mais réduit
-            if random.random() < 0.1:  # Réduits de 25% à 10% de chance de faire un saut aléatoire
-                print("Saut aléatoire exploratoire!")
-                self.last_action = 'jump'
-                return 'jump'
+            # SUPPRIMÉ: Ne plus ajouter de facteur aléatoire pour les sauts exploratoires
+            # if random.random() < 0.1:
+            #     print("Saut aléatoire exploratoire!")
+            #     self.last_action = 'jump'
+            #     return 'jump'
             
             # Si Mario vient de sauter, favoriser l'action "right" juste après
             if self.last_action == 'jump':
-                action_scores['right'] += 3.0
-                self.right_bias_counter = 5  # Augmenter le nombre de frames pour favoriser "right" après un saut
+                action_scores['right'] += 5.0  # Augmenté pour s'assurer de continuer à avancer après un saut
+                self.right_bias_counter = 8  # Augmenté pour favoriser "right" plus longtemps après un saut
             
             if self.right_bias_counter > 0:
-                action_scores['right'] += 2.0
+                action_scores['right'] += 3.0
                 self.right_bias_counter -= 1
             
             # Réinitialiser le cooldown du saut après avoir sauté
             if self.last_action == 'jump':
-                self.jump_cooldown = 5  # 5 frames avant de pouvoir sauter à nouveau
+                self.jump_cooldown = 10  # Augmenté pour espacer davantage les sauts
             
             # Choisir l'action avec le score le plus élevé
             best_action = max(action_scores, key=action_scores.get)

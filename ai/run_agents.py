@@ -61,20 +61,20 @@ def run_ai_mario(agent_type="guided", max_games=None, return_to_menu=True):
             last_state = None
             last_action = None
             
-            # Naviguer d'abord dans le menu jusqu'au niveau
+            # Séquence de navigation dans le menu pour sélectionner le NIVEAU 1
+            # Étape 1: Naviguer jusqu'à "Choose Level"
             print("Navigation dans les menus...")
-            menu_actions = ['right', 'select']  # Actions simplifiées pour le menu
-            for action in menu_actions:
-                next_state, reward, done, info = env.step(action)
-                pygame.time.delay(300)  # Temps d'attente réduit pour accélérer
-                state = next_state
-            for action in menu_actions:
-                next_state, reward, done, info = env.step(action)
-                pygame.time.delay(300)  # Temps d'attente réduit pour accélérer
-                state = next_state
             
-            # Attendre que le niveau se charge
-            pygame.time.delay(1000)  # Temps d'attente réduit pour accélérer
+            # Attendre un peu pour s'assurer que le menu est chargé
+            pygame.time.delay(500)
+            
+            # Étape 2: Sélectionner "Choose Level" (première option)
+            env.step('select')
+            pygame.time.delay(300)
+            
+            # Étape 3: Sélectionner le premier niveau (déjà sélectionné par défaut)
+            env.step('select')
+            pygame.time.delay(1000)  # Attendre que le niveau se charge
             
             print(f"Début du jeu avec l'agent {agent_type}...")
             # Boucle de jeu principale
