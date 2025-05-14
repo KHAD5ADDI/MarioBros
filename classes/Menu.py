@@ -155,10 +155,11 @@ class Menu:
                 )
         if withBanner:
             self.screen.blit(self.menu_banner, (150, 80))
-        self.screen.blit(
-            self.level.sprites.spriteCollection.get("mario_idle").image,
-            (2 * 32, 12 * 32),
-        )
+        # Suppression de l'affichage du Mario décoratif parasite dans le menu principal
+        # self.screen.blit(
+        #     self.level.sprites.spriteCollection.get("mario_idle").image,
+        #     (2 * 32, 12 * 32),
+        # )
         self.screen.blit(
             self.level.sprites.spriteCollection.get("bush_1").image, (14 * 32, 12 * 32)
         )

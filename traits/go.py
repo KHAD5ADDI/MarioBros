@@ -68,20 +68,22 @@ class GoTrait:
 
     def drawEntity(self):
         # Obtenir la position actuelle de la hitbox
-        pos = self.entity.getPos()
-        
-        # Calculer la position exacte pour le rendu du sprite
-        # en tenant compte des potentielles différences de dimensions
-        sprite_width = self.animation.image.get_width()
-        sprite_height = self.animation.image.get_height()
+        pos = self.entity.getPos()  # (rect.x, rect.y)
+        cam_x = self.camera.x if self.camera else 0
+        cam_y = self.camera.y if self.camera else 0
+
+        # Taille de la hitbox et du sprite
         rect_width = self.entity.rect.width
         rect_height = self.entity.rect.height
-        
-        # Position exacte pour que l'image suive parfaitement la hitbox
-        sprite_x = pos[0]
-        sprite_y = pos[1] + rect_height - sprite_height
-        
-        # Afficher le sprite à la position calculée
-        # Ne pas faire de traitement différent selon la direction puisque 
-        # nous utilisons une image fixe sans animation
+        sprite_width = self.animation.image.get_width()
+        sprite_height = self.animation.image.get_height()
+
+        # Calculer le décalage pour centrer le sprite sur la hitbox
+        offset_x = (rect_width - sprite_width) // 2
+        offset_y = (rect_height - sprite_height) // 2
+
+        # Position exacte pour que le sprite soit centré sur la hitbox
+        sprite_x = pos[0] - cam_x + offset_x
+        sprite_y = pos[1] - cam_y + offset_y
+
         self.screen.blit(self.animation.image, (sprite_x, sprite_y))

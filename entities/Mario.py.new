@@ -33,29 +33,29 @@ class StaticImage:
         pass
 
 spriteCollection = Sprites().spriteCollection
-# Remplacer les animations par des images fixes
+# Animations pour Mario
+smallAnimation = Animation(
+    [
+        spriteCollection["mario_run1"].image,
+        spriteCollection["mario_run2"].image,
+        spriteCollection["mario_run3"].image,
+    ],
+    spriteCollection["mario_idle"].image,
+    spriteCollection["mario_jump"].image,
+)
+bigAnimation = Animation(
+    [
+        spriteCollection["mario_big_run1"].image,
+        spriteCollection["mario_big_run2"].image,
+        spriteCollection["mario_big_run3"].image,
+    ],
+    spriteCollection["mario_big_idle"].image,
+    spriteCollection["mario_big_jump"].image,
+)
+
+# Pour la compatibilité avec le code existant, créons aussi des versions statiques
 smallStaticImage = StaticImage(spriteCollection["mario_idle"].image)
 bigStaticImage = StaticImage(spriteCollection["mario_big_idle"].image)
-
-# Anciennes animations (commentées pour référence)
-# smallAnimation = Animation(
-#     [
-#         spriteCollection["mario_run1"].image,
-#         spriteCollection["mario_run2"].image,
-#         spriteCollection["mario_run3"].image,
-#     ],
-#     spriteCollection["mario_idle"].image,
-#     spriteCollection["mario_jump"].image,
-# )
-# bigAnimation = Animation(
-#     [
-#         spriteCollection["mario_big_run1"].image,
-#         spriteCollection["mario_big_run2"].image,
-#         spriteCollection["mario_big_run3"].image,
-#     ],
-#     spriteCollection["mario_big_idle"].image,
-#     spriteCollection["mario_big_jump"].image,
-# )
 
 
 class Mario(EntityBase):
@@ -70,7 +70,7 @@ class Mario(EntityBase):
         self.invincibilityFrames = 0
         self.traits = {
             "jumpTrait": JumpTrait(self),
-            "goTrait": GoTrait(smallStaticImage, screen, self.camera, self),
+            "goTrait": GoTrait(smallAnimation, screen, self.camera, self),  # Utiliser l'animation au lieu de l'image statique
             "bounceTrait": bounceTrait(self),
         }
 
@@ -99,6 +99,16 @@ class Mario(EntityBase):
         self.rect.x += self.vel.x
         self.collision.checkX()
 
+    def applyGravity(self):
+        self.vel.y += self.gravity
+
+    def updateTraits(self):
+        for trait in self.traits.values():
+            try:
+                trait.update()
+            except Exception as e:
+                print(f"Erreur dans updateTraits pour {trait}: {e}")
+
     def checkEntityCollision(self):
         for ent in self.levelObj.entityList:
             collisionState = self.EntityCollider.check(ent)
@@ -107,53 +117,44 @@ class Mario(EntityBase):
                     self._onCollisionWithItem(ent)
                 elif ent.type == "Block":
                     self._onCollisionWithBlock(ent)
-                elif ent.type == "Mob":
+                elif ent.type == "Checkpoint":
+                    self._onCollisionWithCheckpoint(ent)
+                elif "Goomba" in ent.type or "Koopa" in ent.type:
                     self._onCollisionWithMob(ent, collisionState)
 
     def _onCollisionWithItem(self, item):
-        self.levelObj.entityList.remove(item)
-        self.dashboard.points += 100
-        self.dashboard.coins += 1
-        self.sound.play_sfx(self.sound.coin)
+        if item.__class__.__name__ == "RedMushroom":
+            self.powerup(1)
+            item.alive = False
+            self.dashboard.points += 1000
+            self.sound.play_sfx(self.sound.powerup)
 
     def _onCollisionWithBlock(self, block):
-        if not block.triggered:
-            self.dashboard.coins += 1
-            self.sound.play_sfx(self.sound.bump)
-        block.triggered = True
+        pass
+        
+    def _onCollisionWithCheckpoint(self, checkpoint):
+        # Ne rien faire ici, la logique est gérée dans mario_env.py
+        pass
 
     def _onCollisionWithMob(self, mob, collisionState):
-        if isinstance(mob, RedMushroom) and mob.alive:
-            self.powerup(1)
-            self.killEntity(mob)
-            self.sound.play_sfx(self.sound.powerup)
-        elif collisionState.isTop and (mob.alive or mob.bouncing):
-            self.sound.play_sfx(self.sound.stomp)
-            self.rect.bottom = mob.rect.top
+        if isinstance(collisionState, tuple):
+            # unpack tuple
+            isColliding, direction = collisionState
+        else:
+            isColliding = collisionState.isColliding
+            direction = collisionState.direction
+
+        if direction == "top" and mob.alive:
             self.bounce()
             self.killEntity(mob)
-        elif collisionState.isTop and mob.alive and not mob.active:
             self.sound.play_sfx(self.sound.stomp)
-            self.rect.bottom = mob.rect.top
-            mob.timer = 0
-            self.bounce()
-            mob.alive = False
-        elif collisionState.isColliding and mob.alive and not mob.active and not mob.bouncing:
-            mob.bouncing = True
-            if mob.rect.x < self.rect.x:
-                mob.leftrightTrait.direction = -1
-                mob.rect.x += -5
-                self.sound.play_sfx(self.sound.kick)
-            else:
-                mob.rect.x += 5
-                mob.leftrightTrait.direction = 1
-                self.sound.play_sfx(self.sound.kick)
+            self.dashboard.points += 100
         elif collisionState.isColliding and mob.alive and not self.invincibilityFrames:
             if self.powerUpState == 0:
                 self.gameOver()
             elif self.powerUpState == 1:
                 self.powerUpState = 0
-                self.traits['goTrait'].updateAnimation(smallStaticImage)
+                self.traits['goTrait'].updateAnimation(smallAnimation)  # Utiliser l'animation au lieu de l'image statique
                 x, y = self.rect.x, self.rect.y
                 self.rect = pygame.Rect(x, y + 32, 32, 32)
                 self.invincibilityFrames = 60
@@ -197,7 +198,7 @@ class Mario(EntityBase):
         self.restart = True
 
     def getPos(self):
-        return self.rect.x, self.rect.y
+        return self.camera.x + self.rect.x, self.rect.y
 
     def setPos(self, x, y):
         self.rect.x = x
@@ -207,6 +208,47 @@ class Mario(EntityBase):
         if self.powerUpState == 0:
             if powerupID == 1:
                 self.powerUpState = 1
-                self.traits['goTrait'].updateAnimation(bigStaticImage)
+                self.traits['goTrait'].updateAnimation(bigAnimation)  # Utiliser l'animation au lieu de l'image statique
                 self.rect = pygame.Rect(self.rect.x, self.rect.y-32, 32, 64)
                 self.invincibilityFrames = 20
+
+    def render(self, camera):
+        """
+        Affiche Mario à l'écran à la bonne position et orientation.
+        Force l'affichage de Mario avec un rectangle coloré pour assurer la visibilité.
+        """
+        try:
+            # Position pour l'affichage
+            render_x = self.rect.x - camera.x
+            render_y = self.rect.y
+            
+            # FORCER LA VISIBILITÉ: Dessiner un grand rectangle coloré
+            pygame.draw.rect(self.screen, (255, 0, 0), (render_x, render_y, self.rect.width, self.rect.height), 0)  # Rectangle rouge plein
+            pygame.draw.rect(self.screen, (255, 255, 0), (render_x, render_y, self.rect.width, self.rect.height), 3)  # Bordure jaune épaisse
+            
+            # Ajouter un texte "MARIO" au-dessus du personnage pour le repérer facilement
+            font = pygame.font.Font(None, 20)
+            text = font.render("MARIO", True, (255, 255, 255))
+            self.screen.blit(text, (render_x, render_y - 20))
+            
+            # Afficher l'animation si disponible (en supplément du rectangle)
+            if hasattr(self.traits["goTrait"], "animation"):
+                animation = self.traits["goTrait"].animation
+                if hasattr(animation, "image") and animation.image is not None:
+                    try:
+                        if self.traits["goTrait"].heading == 1:
+                            self.screen.blit(animation.image, (render_x, render_y))
+                        else:
+                            flipped = pygame.transform.flip(animation.image, True, False)
+                            self.screen.blit(flipped, (render_x, render_y))
+                    except Exception as e:
+                        print(f"Erreur lors de l'affichage de l'animation: {e}")
+            
+            # Toujours ajouter un point central pour améliorer la visibilité
+            pygame.draw.circle(self.screen, (0, 0, 255), 
+                             (render_x + self.rect.width // 2, render_y + self.rect.height // 2), 5, 0)  # Point bleu au centre
+            
+        except Exception as e:
+            print(f"ERREUR GRAVE dans le rendu de Mario: {e}")
+            import traceback
+            traceback.print_exc()

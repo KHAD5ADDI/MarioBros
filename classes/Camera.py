@@ -13,13 +13,13 @@ class Camera:
     def move(self):
         # Obtenir la position de Mario
         xPosFloat = self.entity.getPosIndexAsFloat().x
-        
+
         # Ajuster le décalage en fonction de la vitesse (si disponible)
         offset = 10  # Décalage de base
         if hasattr(self.entity, 'vel'):
             # Mémoriser la vitesse pour avoir une transition plus douce
             self.last_vel_x = self.entity.vel.x * 0.7 + self.last_vel_x * 0.3
-            
+
             # Si Mario va vite vers la droite, ajuster le décalage pour voir plus loin
             if self.last_vel_x > 3:
                 # Ajout d'un petit décalage supplémentaire, proportionnel à la vitesse
@@ -35,7 +35,7 @@ class Camera:
         if hasattr(self.entity, 'vel') and abs(self.entity.vel.x) > 3:
             # Augmenter la réactivité quand Mario va vite
             dynamic_smoothness = min(0.5, self.smoothness * (1 + abs(self.entity.vel.x) * 0.05))
-            
+
         self.pos.x = self.pos.x + (target_x - self.pos.x) * dynamic_smoothness
 
         # Assurer que la caméra ne dépasse pas certaines limites

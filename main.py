@@ -49,6 +49,58 @@ def main_game():
             mario.pauseObj.update()
         else:
             level.drawLevel(mario.camera)
+            mario.traits["goTrait"].drawEntity()  # Affichage explicite de Mario
+            dashboard.update()
+            mario.update()
+        pygame.display.update()
+        clock.tick(max_frame_rate)
+    return 'restart'
+
+def main_game_no_retreat():
+    """Fonction pour lancer le jeu sans possibilité de reculer"""
+    # Supprimer les avertissements de libpng
+    stderr_redirect = suppress_pygame_warnings()
+    
+    with stderr_redirect():
+        pygame.mixer.pre_init(44100, -16, 2, 4096)
+        pygame.init()
+        screen = pygame.display.set_mode((640, 480))
+        pygame.display.set_caption("Super Mario Python - Mode Sans Recul")
+    
+    max_frame_rate = 60
+    dashboard = Dashboard("./img/font.png", 8, screen)
+    sound = Sound()
+    level = Level(screen, sound, dashboard)
+    
+    # Charger un niveau par défaut (nécessaire pour éviter l'erreur NoneType)
+    level.loadLevel("Level1-1")
+    
+    menu = Menu(screen, dashboard, level, sound)
+    
+    while not menu.start:
+        menu.update()
+    
+    # Si le menu a sélectionné un niveau spécifique, on le charge
+    if hasattr(menu, 'selected_level') and menu.selected_level:
+        level.loadLevel(menu.selected_level)
+    
+    mario = Mario(0, 0, level, screen, dashboard, sound)
+    
+    # Activer l'option "force_forward" mais définir la direction vers la gauche 
+    # puisque le jeu est inversé
+    mario.traits["goTrait"].force_forward = True
+    # Définir la direction initiale vers la gauche (-1)
+    mario.traits["goTrait"].direction = -1
+    
+    clock = pygame.time.Clock()
+
+    while not mario.restart:
+        pygame.display.set_caption("Super Mario (Sans Recul) - {:d} FPS".format(int(clock.get_fps())))
+        if mario.pause:
+            mario.pauseObj.update()
+        else:
+            level.drawLevel(mario.camera)
+            mario.traits["goTrait"].drawEntity()  # Affichage explicite de Mario
             dashboard.update()
             mario.update()
         pygame.display.update()
@@ -146,9 +198,10 @@ def afficher_menu_principal():
     
     # Créer les boutons du menu principal
     buttons = [
-        MarioButton(screen, 220, 180, 200, 50, "Jeu Simple"),
-        MarioButton(screen, 220, 250, 200, 50, "Agent Guidé"),
-        MarioButton(screen, 220, 320, 200, 50, "Agent Exploratoire")
+        MarioButton(screen, 220, 160, 200, 50, "Jeu Simple"),
+        MarioButton(screen, 220, 230, 200, 50, "Agent Exploratoire"),
+        MarioButton(screen, 220, 300, 200, 50, "Agent Guidé"),
+        MarioButton(screen, 220, 370, 200, 50, "Supprimer mémoire IA")  # Nouveau bouton
     ]
     
     # Chargement des sprites pour l'animation
@@ -175,6 +228,10 @@ def afficher_menu_principal():
     running = True
     next_action = None
     
+    # Message de confirmation pour la suppression de la mémoire IA
+    confirmation_message = None
+    confirmation_timer = 0
+    
     while running:
         # Gérer les événements
         for event in pygame.event.get():
@@ -193,12 +250,17 @@ def afficher_menu_principal():
                         if i == 0:  # Jeu Simple
                             running = False
                             next_action = "normal"
-                        elif i == 1:  # Agent Guidé
-                            running = False
-                            next_action = "guided"
-                        elif i == 2:  # Agent Exploratoire
+                        elif i == 1:  # Agent Exploratoire
                             running = False
                             next_action = "exploratory"
+                        elif i == 2:  # Agent Guidé
+                            running = False
+                            next_action = "guided"
+                        elif i == 3:  # Supprimer mémoire IA
+                            confirmation_message = "Mémoire IA supprimée !"
+                            confirmation_timer = 120
+                            if os.path.exists("ai_memory.pkl"):
+                                os.remove("ai_memory.pkl")
         
         # Dessiner l'arrière-plan
         for y in range(0, 13):
@@ -223,17 +285,6 @@ def afficher_menu_principal():
             for x in range(0, 20):
                 screen.blit(spritesheet.get("ground").image, (x * 32, y * 32))
         
-        # Dessiner et animer Mario qui court
-        frame_counter += 1
-        if frame_counter % 5 == 0:
-            mario_frame = (mario_frame + 1) % 3
-        
-        mario_x += 5
-        if mario_x > 640:
-            mario_x = -50
-            
-        screen.blit(mario_sprites[mario_frame].image, (mario_x, mario_y))
-        
         # Dessiner et animer les goombas
         for i, (goomba_x, goomba_y) in enumerate(goomba_positions):
             goomba_positions[i] = (goomba_x - 2, goomba_y)
@@ -256,6 +307,16 @@ def afficher_menu_principal():
         
         screen.blit(title_shadow, (322, 82))
         screen.blit(title_text, (320, 80))
+
+        # Afficher le message de confirmation si besoin
+        if confirmation_message:
+            font = pygame.font.Font(None, 36)
+            text = font.render(confirmation_message, True, (255,255,0))
+            rect = text.get_rect(center=(320, 440))
+            screen.blit(text, rect)
+            # Afficher le message pendant 2 secondes
+            if pygame.time.get_ticks() - confirmation_timer > 2000:
+                confirmation_message = None
         
         # Mettre à jour et dessiner les boutons
         for button in buttons:
@@ -276,6 +337,8 @@ if __name__ == "__main__":
         # Lancer le jeu selon le mode choisi
         if action == "normal":
             result = main_game()
+        elif action == "no_retreat":
+            result = main_game_no_retreat()
         elif action == "guided":
             result = run_ai_mario("guided")
         elif action == "exploratory":

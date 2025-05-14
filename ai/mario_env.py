@@ -98,7 +98,7 @@ class MarioEnv:
             print("Niveau sélectionné, passage à l'état de jeu...")
             self.game_state = "level_start"
             self.level = Level(self.screen, self.sound, self.dashboard)
-            levelName = self.menu.levelNames[self.menu.currSelectedLevel-1] if self.menu.inChoosingLevel else "Level1-1"
+            levelName = "Level1-1"  # Revenir au niveau 1-1 par défaut
             print(f"Chargement du niveau: {levelName}")
             self.level.loadLevel(levelName)
             
@@ -278,16 +278,35 @@ class MarioEnv:
             # Dessiner Mario explicitement - CORRECTION POUR L'ORIENTATION
             print("Dessin de Mario via goTrait...")
             animation = self.mario.traits["goTrait"].animation
-            
             # Correction pour l'orientation de Mario (il ne doit pas être à l'envers)
             # Utiliser le heading de Mario plutôt que sa direction de mouvement
+            mario_draw_x = self.mario.rect.x - self.mario.camera.x
+            mario_draw_y = self.mario.rect.y
             if self.mario.traits["goTrait"].heading == 1:  # Facing right
-                self.screen.blit(animation.image, (self.mario.rect.x - self.mario.camera.x, self.mario.rect.y))
+                self.screen.blit(animation.image, (mario_draw_x, mario_draw_y))
             else:  # Facing left
                 self.screen.blit(
                     pygame.transform.flip(animation.image, True, False),
-                    (self.mario.rect.x - self.mario.camera.x, self.mario.rect.y)
+                    (mario_draw_x, mario_draw_y)
                 )
+            # Affichage de la hitbox de Mario pour le debug
+            pygame.draw.rect(self.screen, (255,0,0), pygame.Rect(mario_draw_x, mario_draw_y, self.mario.rect.width, self.mario.rect.height), 2)
+
+            # --- Ajout : Suivi de la position Y de la hitbox de Mario avec le sprite de Mario ---
+            # Récupérer la position Y de la hitbox de Mario (au centre de la hitbox)
+            mario_hitbox_center_y = self.mario.rect.y + self.mario.rect.height // 2
+            # Afficher le sprite de Mario au centre de l'écran, aligné sur la position Y de la hitbox de Mario
+            screen_center_x = self.screen.get_width() // 2
+            # Décaler de 15 pixels vers la droite (10 précédemment + 5 supplémentaires)
+            sprite_image = animation.image
+            sprite_rect = sprite_image.get_rect()
+            sprite_draw_x = screen_center_x - sprite_rect.width // 2 + 15
+            sprite_draw_y = mario_hitbox_center_y - sprite_rect.height // 2
+            if self.mario.traits["goTrait"].heading == 1:
+                self.screen.blit(sprite_image, (sprite_draw_x, sprite_draw_y))
+            else:
+                self.screen.blit(pygame.transform.flip(sprite_image, True, False), (sprite_draw_x, sprite_draw_y))
+            # --- Fin ajout ---
         
         except Exception as e:
             print(f"ERREUR lors du dessin du niveau: {e}")
@@ -431,7 +450,6 @@ class MarioEnv:
             if self.agent_type == "guided":
                 mario_x, mario_y = self.mario.rect.x, self.mario.rect.y
                 nearby_objects = []
-                
                 # Collecter les entités
                 try:
                     for entity in self.level.entityList:
@@ -443,14 +461,12 @@ class MarioEnv:
                                 nearby_objects.append([rel_x, rel_y, entity_type])
                 except Exception as e:
                     print(f"Erreur lors de la collecte des entités: {e}")
-                
                 # Collecter les tuiles
                 try:
                     visible_area_x_start = max(0, int((mario_x - 200) / 32))
                     visible_area_x_end = min(self.level.levelLength, int((mario_x + 200) / 32) + 1)
                     visible_area_y_start = max(0, int((mario_y - 200) / 32))
                     visible_area_y_end = min(15, int((mario_y + 200) / 32) + 1)
-                    
                     for y in range(visible_area_y_start, visible_area_y_end):
                         for x in range(visible_area_x_start, visible_area_x_end):
                             if self.level.level[y][x] != 0:
@@ -462,7 +478,6 @@ class MarioEnv:
                                     nearby_objects.append([rel_x, rel_y, "Tile"])
                 except Exception as e:
                     print(f"Erreur lors de la collecte des tuiles: {e}")
-                
                 # Créer et retourner l'état
                 state = {
                     "game_state": self.game_state,
@@ -486,17 +501,6 @@ class MarioEnv:
                     self.mario.vel.y,
                     self.mario.powerUpState
                 ])
-        
-        elif self.game_state == "game_over":
-            # État pour fin de jeu
-            return {
-                "game_state": "game_over",
-                "mario_pos": [0, 0],
-                "mario_vel": [0, 0],
-                "nearby_objects": [],
-                "coins": self.dashboard.coins,
-                "score": self.dashboard.points
-            }
     
     def render(self):
         """Cette méthode est implicitement appelée dans step()"""

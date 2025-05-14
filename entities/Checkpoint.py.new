@@ -1,0 +1,79 @@
+import pygame
+
+from classes.Animation import Animation
+from classes.Camera import Camera
+from classes.Maths import vec2D
+from entities.EntityBase import EntityBase
+from classes.Sprites import Sprites
+
+
+class Checkpoint(EntityBase):
+    def __init__(self, x, y, checkpointID, screen, sound, level, dashboard, game):
+        super(Checkpoint, self).__init__(x, y, 0)
+        self.checkpointID = checkpointID
+        self.screen = screen
+        self.sound = sound
+        self.level = level
+        self.dashboard = dashboard
+        self.game = game
+        self.EntityCollider = level.EntityCollider
+        self.animation = self.loadAnimation()
+        self.sprites = Sprites()
+        self.camera = Camera(self.rect, self)
+        self.active = True
+        self.type = "Checkpoint"
+        self.triggered = False
+        self.state = 0
+        self.rect = pygame.Rect(x, y, 96, 96)  # Checkpoint agrandi pour meilleure visibilité
+        self.vel = vec2D(0, 0)
+        self.inAir = False
+        self.animation_timer = 0  # Minuteur pour les animations
+
+    def loadAnimation(self):
+        return Animation([])
+
+    def update(self):
+        self.animation_timer += 1
+        if self.active:
+            self.drawCheckpoint()
+        else:
+            self.state = 1
+            self.drawCheckpoint()
+
+    def drawCheckpoint(self):
+        # Rendre le checkpoint beaucoup plus visible avec une animation pulsante
+        import math
+        
+        # Position de base pour le rendu
+        x = self.rect.x - self.camera.x
+        y = self.rect.y
+        
+        # Créer une animation pulsante (scaling)
+        pulse_factor = 1.0 + 0.2 * math.sin(pygame.time.get_ticks() / 200)  # Pulsation lente
+        
+        # Calculer la nouvelle taille
+        original_width = 64
+        original_height = 64
+        pulse_width = int(original_width * pulse_factor)
+        pulse_height = int(original_height * pulse_factor)
+        
+        # Dessiner un rectangle clignotant derrière le checkpoint
+        flash_intensity = int(127 + 127 * math.sin(pygame.time.get_ticks() / 100))
+        pygame.draw.rect(self.screen, (flash_intensity, flash_intensity, 0), 
+                        (x - 10, y - 10, self.rect.width + 20, self.rect.height + 20), 0)
+        
+        # Mettre le checkpoint au centre du rectangle
+        x_centered = x + (self.rect.width - pulse_width) // 2
+        y_centered = y + (self.rect.height - pulse_height) // 2
+        
+        # Dessiner l'image selon l'état
+        checkpoint_img = self.sprites.spriteCollection.get("checkpoint-flipped" if self.state else "checkpoint").image
+        # Redimensionner l'image pour l'animation de pulsation
+        scaled_img = pygame.transform.scale(checkpoint_img, (pulse_width, pulse_height))
+        self.screen.blit(scaled_img, (x_centered, y_centered))
+        
+        # Ajouter un texte "CHECKPOINT" au-dessus
+        font = pygame.font.Font(None, 24)
+        text = font.render("CHECKPOINT", True, (255, 255, 255))
+        text_rect = text.get_rect(centerx=x + self.rect.width // 2, y=y - 30)
+        self.screen.blit(text, text_rect)
