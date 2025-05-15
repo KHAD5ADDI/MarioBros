@@ -10,6 +10,7 @@ import time
 import os
 import numpy as np
 import csv
+import datetime
 from ai.mario_env import MarioEnv
 from ai.agents.GuidedAgent import GuidedAgent
 from ai.agents.ExploratoryAgent import ExploratoryAgent
@@ -190,14 +191,16 @@ def run_ai_mario(agent_type="guided", max_games=None, return_to_menu=True):
             with open(csv_path, mode="a", newline="", encoding="utf-8") as csvfile:
                 writer = csv.writer(csvfile)
                 if write_header:
-                    writer.writerow(["episode", "score_cumule", "score_specifique", "type_score", "reussite"])
+                    writer.writerow(["episode", "score_cumule", "score_specifique", "type_score", "reussite", "datetime"])
                     write_header = False
+                now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 writer.writerow([
                     total_episodes,           # numéro d'épisode
                     total_reward,             # score cumulé
                     score_value,              # score spécifique (distance ou temps)
                     score_type,               # type de score
-                    success                   # réussite (1=checkpoint, 0=non)
+                    success,                  # réussite (1=checkpoint, 0=non)
+                    now                       # date et heure
                 ])
             
             # Message temporaire à l'écran indiquant la prochaine partie

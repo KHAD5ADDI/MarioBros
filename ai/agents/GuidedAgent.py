@@ -98,10 +98,23 @@ class GuidedAgent:
         
         print("Agent guidé initialisé avec paramètres d'apprentissage améliorés et mémoire des zones dangereuses")
         
+    def filter_state(self, state):
+        """
+        Retourne un état limité (naïf) : position, vitesse et taille de Mario uniquement.
+        """
+        return {
+            "mario_pos": state.get("mario_pos", [0, 0]),
+            "mario_vel": state.get("mario_vel", [0, 0]),
+            "mario_size": state.get("mario_size", 0),
+            "game_state": state.get("game_state", "playing")
+        }
+
     def choose_action(self, state):
         """
-        Sélectionne une action en fonction de l'état actuel
+        Sélectionne une action en fonction de l'état actuel (état limité pour agent naïf)
         """
+        # Filtrer l'état pour ne garder que les infos simples
+        state = self.filter_state(state)
         try:
             # Actions possibles
             actions = ['left', 'right', 'jump', 'idle']

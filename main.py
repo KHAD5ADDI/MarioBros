@@ -300,14 +300,21 @@ def afficher_menu_principal():
             screen.blit(spritesheet.get("bush_2").image, (x_pos + 32, 12 * 32))
             screen.blit(spritesheet.get("bush_3").image, (x_pos + 64, 12 * 32))
         
-        # Dessiner le titre
-        title_font = pygame.font.Font(None, 64)
-        title_text = title_font.render("SUPER MARIO PYTHON", True, (255, 255, 255))
-        title_shadow = title_font.render("SUPER MARIO PYTHON", True, (0, 0, 0))
+        # Afficher uniquement le nouveau logo Super Mario centré en haut
+        logo = pygame.image.load("img/Super-Mario-Logo.png").convert_alpha()
+        # Redimensionner le logo pour qu'il ne dépasse pas 400px de large et 120px de haut
+        max_width = 400
+        max_height = 120
+        scale = min(max_width / logo.get_width(), max_height / logo.get_height(), 1)
+        if scale < 1:
+            new_size = (int(logo.get_width() * scale), int(logo.get_height() * scale))
+            logo = pygame.transform.smoothscale(logo, new_size)
+        logo_rect = logo.get_rect()
+        logo_rect.centerx = 320  # Centré horizontalement
+        logo_rect.y = 40         # Position verticale (ajustable)
+        screen.blit(logo, logo_rect)
+        # Ne rien afficher d'autre comme titre ou ombre
         
-        screen.blit(title_shadow, (322, 82))
-        screen.blit(title_text, (320, 80))
-
         # Afficher le message de confirmation si besoin
         if confirmation_message:
             font = pygame.font.Font(None, 36)
@@ -334,10 +341,10 @@ if __name__ == "__main__":
     # Pour les agents, enchaîner les parties sans repasser par le menu
     if action == "guided":
         while True:
-            run_ai_mario("guided")
+            run_ai_mario("exploratory")
     elif action == "exploratory":
         while True:
-            run_ai_mario("exploratory")
+            run_ai_mario("guided")
     elif action == "normal":
         main_game()
     elif action == "no_retreat":
