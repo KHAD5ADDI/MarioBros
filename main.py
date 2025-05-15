@@ -40,7 +40,7 @@ def main_game():
     if hasattr(menu, 'selected_level') and menu.selected_level:
         level.loadLevel(menu.selected_level)
     
-    mario = Mario(0, 0, level, screen, dashboard, sound)
+    mario = Mario(3, 0, level, screen, dashboard, sound)
     clock = pygame.time.Clock()
 
     while not mario.restart:
@@ -84,7 +84,7 @@ def main_game_no_retreat():
     if hasattr(menu, 'selected_level') and menu.selected_level:
         level.loadLevel(menu.selected_level)
     
-    mario = Mario(0, 0, level, screen, dashboard, sound)
+    mario = Mario(3, 0, level, screen, dashboard, sound)
     
     # Activer l'option "force_forward" mais définir la direction vers la gauche 
     # puisque le jeu est inversé
@@ -329,21 +329,20 @@ def afficher_menu_principal():
     return next_action
 
 if __name__ == "__main__":
-    # Boucle principale entre le menu principal et le jeu
-    while True:
-        # Afficher le menu principal
-        action = afficher_menu_principal()
-        
-        # Lancer le jeu selon le mode choisi
-        if action == "normal":
-            result = main_game()
-        elif action == "no_retreat":
-            result = main_game_no_retreat()
-        elif action == "guided":
-            result = run_ai_mario("guided")
-        elif action == "exploratory":
-            result = run_ai_mario("exploratory")
-        
-        # Si on ne revient pas au menu principal, sortir de la boucle
-        if result != 'menu_principal':
-            break
+    # Afficher le menu principal UNE SEULE FOIS pour choisir le mode
+    action = afficher_menu_principal()
+    # Pour les agents, enchaîner les parties sans repasser par le menu
+    if action == "guided":
+        while True:
+            run_ai_mario("guided")
+    elif action == "exploratory":
+        while True:
+            run_ai_mario("exploratory")
+    elif action == "normal":
+        main_game()
+    elif action == "no_retreat":
+        main_game_no_retreat()
+    # Pour quitter, il faut fermer la fenêtre ou faire sys.exit() dans le jeu
+    # Fin du programme après une partie
+    pygame.quit()
+    sys.exit()

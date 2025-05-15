@@ -48,6 +48,14 @@ class MarioEnv:
         self.max_distance = 0
         self.total_reward_history = []
         
+        # Charger l'image de checkpoint pour l'affichage à la victoire
+        self.checkpoint_img_surface = None
+        for ext in ["png", "jpg"]:
+            img_path = os.path.join("img", f"checkpoint.{ext}")
+            if os.path.exists(img_path):
+                self.checkpoint_img_surface = pygame.image.load(img_path)
+                break
+        
         # Initialiser l'environnement
         self.reset()
 
@@ -101,12 +109,10 @@ class MarioEnv:
             levelName = "Level1-1"  # Revenir au niveau 1-1 par défaut
             print(f"Chargement du niveau: {levelName}")
             self.level.loadLevel(levelName)
-            
-            # Réinitialiser Mario à une position de départ correcte
-            self.mario = Mario(0, 0, self.level, self.screen, self.dashboard, self.sound)
-            
+            # Décaler Mario de 3 pixels vers la droite
+            self.mario = Mario(3, 0, self.level, self.screen, self.dashboard, self.sound)
             # Forcer la position de départ de Mario au début du niveau
-            self.mario.rect.x = 80  # Position X initiale (au début du niveau)
+            self.mario.rect.x = 80 + 3  # Position X initiale (au début du niveau + 3px)
             self.mario.rect.y = 350  # Position Y initiale (sur le sol)
             self.last_x_pos = self.mario.rect.x
             
@@ -313,19 +319,19 @@ class MarioEnv:
             import traceback
             traceback.print_exc()
     
+        # Initialiser l'indicateur de mort par blocage
+        blocked_death = False
         # Calculer la récompense
         # Récompense pour avancer
         if self.mario.rect.x > self.last_x_pos + 1:
             progress = self.mario.rect.x - self.last_x_pos
             reward += progress * 0.1
             self.steps_since_progress = 0
-            
             # Mettre à jour la distance maximale
             if self.mario.rect.x > self.max_distance:
                 self.max_distance = self.mario.rect.x
         else:
             self.steps_since_progress += 1
-        
         # Punir Mario s'il reste immobile trop longtemps (4 secondes = 240 frames à 60 FPS)
         if self.steps_since_progress > 240:  # 4 secondes à 60 FPS
             print("Mario est resté immobile trop longtemps - MORT AUTOMATIQUE!")
@@ -333,7 +339,7 @@ class MarioEnv:
             self.game_state = "game_over"
             self.done = True
             self.games_played += 1
-            
+            blocked_death = True
             # Afficher un message d'erreur sur l'écran
             font = pygame.font.Font(None, 48)
             death_text = font.render("MARIO EST TROP LENT!", True, (255, 0, 0))
@@ -376,11 +382,15 @@ class MarioEnv:
             self.game_state = "checkpoint_reached"
             self.done = True
             self.games_played += 1
-            
+            # Afficher l'image de checkpoint si elle existe
+            if self.checkpoint_img_surface:
+                img_rect = self.checkpoint_img_surface.get_rect()
+                img_rect.midbottom = (self.screen.get_width() // 2, 13 * 32)
+                self.screen.blit(self.checkpoint_img_surface, img_rect)
             # Afficher un message de victoire
             font = pygame.font.Font(None, 48)
             victory_text = font.render("CHECKPOINT ATTEINT!", True, (255, 255, 0))
-            text_rect = victory_text.get_rect(center=(self.screen.get_width()//2, self.screen.get_height()//2))
+            text_rect = victory_text.get_rect(center=(self.screen.get_width()//2, self.screen.get_height()//2 + 60))
             self.screen.blit(victory_text, text_rect)
             pygame.display.update()
             time.sleep(2)  # Afficher le message pendant 2 secondes
@@ -391,6 +401,7 @@ class MarioEnv:
     def step(self, action):
         """Exécute une action dans l'environnement"""
         reward = 0
+        blocked_death = False  # Toujours défini, évite le NameError
         
         # Gérer les événements pygame pour éviter que l'application ne se bloque
         pygame.event.pump()
@@ -425,12 +436,24 @@ class MarioEnv:
                 print(f"Parties jouées: {self.games_played}, Récompense moyenne: {avg_reward:.2f}")
                 print(f"Distance maximale atteinte: {self.max_distance}")
         
+        # --- GESTION DU SAUT INUTILE (mortelle) ---
+        if action == 'kill_jump':
+            print("L'agent a sauté sans raison valable : MORT INSTANTANÉE !")
+            self.game_state = "game_over"
+            self.done = True
+            self.dashboard.points -= 500  # Pénalité très forte
+            self.mario.restart = True
+            return self.get_state(), -500, True, {"game_state": "game_over", "kill_jump": True}
+        
         # Mettre à jour l'écran
         pygame.display.update()
         self.clock.tick(self.max_frame_rate)
         
         self.total_reward += reward
-        return self.get_state(), reward, self.done, {"game_state": self.game_state}
+        info = {"game_state": self.game_state}
+        if blocked_death:
+            info["blocked_death"] = True
+        return self.get_state(), reward, self.done, info
 
     def get_state(self):
         """Retourne une représentation de l'état actuel du jeu"""
@@ -446,8 +469,8 @@ class MarioEnv:
             }
         
         elif self.game_state in ["playing", "level_start"]:
-            # Pour l'agent guidé dans le gameplay
-            if self.agent_type == "guided":
+            # Pour l'agent guidé ou exploratoire dans le gameplay
+            if self.agent_type in ["guided", "exploratory"]:
                 mario_x, mario_y = self.mario.rect.x, self.mario.rect.y
                 nearby_objects = []
                 # Collecter les entités

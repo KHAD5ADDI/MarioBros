@@ -240,17 +240,36 @@ class GuidedAgent:
             # Récupérer les informations d'état
             mario_vel = state["mario_vel"]
             nearby_objects = state["nearby_objects"]
-            
-            # DEBUG: vérifier si Mario est au sol
+            mario_pos = state["mario_pos"]
             is_on_ground = mario_vel[1] == 0
-            print(f"Mario est au sol: {is_on_ground}")
-            
-            # SUPPRIMÉ: Ne plus favoriser le saut systématiquement quand Mario est au sol
-            # if is_on_ground and random.random() < 0.3:
-            #     print("Saut favorisé car Mario est au sol!")
-            #     self.last_action = 'jump'
-            #     return 'jump'
-            
+            avance = mario_vel[0] > 0
+
+            # Analyse des objets proches pour détecter obstacle, vide ou ennemi devant
+            obstacle_ahead = False
+            void_ahead = False
+            enemy_ahead = False
+            ground_tiles_ahead = []
+            for obj in nearby_objects:
+                rel_x, rel_y, obj_type = obj
+                # Bloc devant
+                if ("Block" in obj_type or "Brick" in obj_type or "Tile" in obj_type) and 10 < rel_x < 40 and -40 < rel_y < 5:
+                    obstacle_ahead = True
+                # Sol devant (pour détecter les trous)
+                if ("Tile" in obj_type or "Block" in obj_type or "Brick" in obj_type) and 16 < rel_x < 96 and -10 < rel_y < 40:
+                    ground_tiles_ahead.append(obj)
+                # Ennemi devant
+                if ("Goomba" in obj_type or "Koopa" in obj_type) and 0 < rel_x < 80 and abs(rel_y) < 50:
+                    enemy_ahead = True
+            if len(ground_tiles_ahead) == 0 and avance:
+                void_ahead = True
+
+            # --- PÉNALITÉ MORTELLE POUR SAUT INUTILE ---
+            # Si l'action choisie est 'jump' alors qu'il n'y a ni obstacle, ni vide, ni ennemi devant, infliger une mort immédiate
+            if self.last_action == 'jump' and is_on_ground and not (obstacle_ahead or void_ahead or enemy_ahead):
+                print("SAUT INUTILE détecté : MORT !")
+                # Forcer la mort de Mario via une récompense très négative
+                return 'kill_jump'
+
             # Afficher des informations de débogage (réduites)
             print(f"Position: {mario_pos}, Vitesse: {mario_vel}, Objets: {len(nearby_objects)}")
             
@@ -323,8 +342,9 @@ class GuidedAgent:
                 # Pas de sol détecté devant = probablement un trou
                 action_scores['jump'] += self.weights["jump_over_gap"] * 3
                 print("OBSTACLE: Trou détecté, je saute!")
-                # Forcer le saut directement si un trou est détecté
-                return 'jump'
+                # Ne sauter que si Mario est au sol
+                if is_on_ground:
+                    return 'jump'
             
             # Si un obstacle est détecté devant, sauter est prioritaire
             if blocks_ahead or enemies_ahead:
